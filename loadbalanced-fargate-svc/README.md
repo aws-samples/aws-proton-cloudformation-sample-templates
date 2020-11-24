@@ -46,7 +46,7 @@ aws iam create-role --role-name ProtonCfnServiceRole --assume-role-policy-docume
 aws iam attach-role-policy --role-name ProtonCfnServiceRole --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
 ```
 
-Create the role that Proton will assume to call CloudFormation in your AWS account. ⚠ Before you run this, replace `AWS_DEV_ACCOUNT` in `policies/proton-service-policy.json` with your own AWS account ID.
+Create the role that Proton will assume to call CloudFormation in your AWS account.
 
 ```
 aws iam create-role --role-name ProtonServiceRole --assume-role-policy-document file://./policies/proton-service-assume-policy.json
