@@ -1,0 +1,32 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::*:role/ProtonCfnServiceRole"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "cloudformation:CancelUpdateStack",
+                "cloudformation:CreateChangeSet",
+                "cloudformation:DeleteChangeSet",
+                "cloudformation:DescribeStacks",
+                "cloudformation:ContinueUpdateRollback",
+                "cloudformation:DetectStackResourceDrift",
+                "cloudformation:DescribeStackResourceDrifts",
+                "cloudformation:CreateStack",
+                "cloudformation:DeleteStack",
+                "cloudformation:UpdateStack",
+                "cloudformation:DescribeChangeSet",
+                "cloudformation:ExecuteChangeSet",
+                "cloudformation:ListChangeSets",
+                "cloudformation:ListStackResources",
+                "cloudformation:DescribeStackDriftDetectionStatus"
+            ],
+            "Resource": "arn:aws:cloudformation:*:*:stack/AWSProton-*"
+        }
+
+    ]
+  }
