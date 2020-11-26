@@ -2,12 +2,14 @@
 
 This repository contains templates and specs for admins to create Environment and Service templates in AWS Proton. The environment contains an ECS Cluster and a VPC with two public subnets. The service template contains the all the resources required to create a Fargate Service in that environment.
 
-Developers provisioning their services can configure the service's:
+Developers provisioning their services can configure the services:
 * Fargate cpu size
 * Fargate memory size
 * Service count
 
-# Registering and deploying these templates
+# Registering and deploying these templates - CONSOLE
+
+You can register and deploy these templates by using the AWS Proton console. To do this, you will need to compress the templates using the instructions below, upload them to an S3 bucket, and use the Proton console to register and test them. If you prefer to use the Command Line Interface, follow the instructions below:
 
 ## Prerequisites
 
