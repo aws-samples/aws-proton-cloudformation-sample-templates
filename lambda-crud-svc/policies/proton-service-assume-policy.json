@@ -4,9 +4,9 @@
       {
         "Effect": "Allow",
         "Principal": {
-          "Service": "cloudformation.amazonaws.com"
+          "Service": "proton.amazonaws.com"
         },
         "Action": "sts:AssumeRole"
       }
     ]
-}
+  }

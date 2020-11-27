@@ -1,13 +1,14 @@
-# Load Balanced Fargate Service
+# Lambda CRUD Service
 
-This repository contains templates and specs for admins to create Environment and Service templates in AWS Proton. The environment contains an ECS Cluster and a VPC with two public subnets. The service template contains the all the resources required to create a Fargate Service in that environment.
+This repository contains templates and specs for admins to create Environment and Service templates in AWS Proton. The environment contains an simple DDB table. The service template contains the all the resources required to provision lambdas backed APIs as well as a CD pipeline.
 
 Developers provisioning their services can configure the services:
-* Fargate cpu size
-* Fargate memory size
-* Service count
+* Lambda memory size
+* Lambda function timeout
+* Lambda runtime
+* A resource to construct a CRUD API around.
 
-# Registering and deploying these templates - CONSOLE
+# Registering and deploying these templates
 
 You can register and deploy these templates by using the AWS Proton console. To do this, you will need to compress the templates using the instructions below, upload them to an S3 bucket, and use the Proton console to register and test them. If you prefer to use the Command Line Interface, follow the instructions below:
 
@@ -65,23 +66,23 @@ The first thing we need to do is register the environment templates.
 First, let's create an environment template - this will contain all of our environment template major/minor versions.
 
 ```
-aws proton-preview \
+aws proton \
   --endpoint-url https://proton.us-west-2.amazonaws.com \
   --region us-west-2 \
   create-environment-template \
-  --template-name "public-vpc" \
-  --display-name "PublicVPC" \
-  --description "VPC with Public Access and ECS Cluster"
+  --template-name "crud-api" \
+  --display-name "CRUD Environment" \
+  --description "Environment with DDB Table"
 ```
 
-Now, let's create a new major version for our `public-vpc` environment template.
+Now, let's create a new major version for our `crud-api` environment template.
 
 ```
-aws proton-preview \
+aws proton \
   --endpoint-url https://proton.us-west-2.amazonaws.com \
   --region us-west-2 \
   create-environment-template-major-version \
-  --template-name "public-vpc" \
+  --template-name "crud-api" \
   --description "Version 1"
 ```
 
@@ -90,12 +91,12 @@ Now that we have our major version defined, we can create a minor version which 
 ```
 tar -zcvf env-template.tar.gz environment/ && aws s3 cp env-template.tar.gz s3://proton-cli-templates-${account_id}/env-template.tar.gz && rm env-template.tar.gz
 
-aws proton-preview \
+aws proton \
   --endpoint-url https://proton.us-west-2.amazonaws.com \
   --region us-west-2 \
   create-environment-template-minor-version \
-  --template-name "public-vpc" \
-  --description "Version 2" \
+  --template-name "crud-api" \
+  --description "Version 1" \
   --major-version-id "1" \
   --source-s3-bucket proton-cli-templates-${account_id} \
   --source-s3-key env-template.tar.gz
@@ -104,11 +105,11 @@ aws proton-preview \
 Now let's wait for the environment template minor version to be registered:
 
 ```
-aws proton-preview \
+aws proton \
   --endpoint-url https://proton.us-west-2.amazonaws.com \
   --region us-west-2 \
   wait environment-template-registration-complete \
-  --template-name "public-vpc" \
+  --template-name "crud-api" \
   --major-version-id "1" \
   --minor-version-id "0"
 ```
@@ -116,11 +117,11 @@ aws proton-preview \
 If we're happy with our template, we can "publish" it, making it available for developers to register services against.
 
 ```
-aws proton-preview \
+aws proton \
   --endpoint-url https://proton.us-west-2.amazonaws.com \
   --region us-west-2 \
   update-environment-template-minor-version \
-  --template-name "public-vpc" \
+  --template-name "crud-api" \
   --major-version-id "1" \
   --minor-version-id "0" \
   --status "PUBLISHED"
@@ -134,25 +135,25 @@ The service template creation experience is basically the same. We'll create a s
 Let's create our service template.
 
 ```
-aws proton-preview \
+aws proton \
   --endpoint-url https://proton.us-west-2.amazonaws.com \
   --region us-west-2 \
   create-service-template \
-  --template-name "lb-fargate-service" \
-  --display-name "LoadbalancedFargateService" \
-  --description "Fargate Service with an Application Load Balancer"
+  --template-name "crud-api-service" \
+  --display-name "CRUD API Service" \
+  --description "CRUD API Service backed by AWS Lambda"
 ```
 
-Now, let's create a new major version for our `lb-fargate-service` service template - and we'll associate it with the environment template we created above.
+Now, let's create a new major version for our `http-api-service` service template - and we'll associate it with the environment template we created above.
 
 ```
-aws proton-preview \
+aws proton \
   --endpoint-url https://proton.us-west-2.amazonaws.com \
   --region us-west-2 \
   create-service-template-major-version \
-  --template-name "lb-fargate-service" \
+  --template-name "crud-api-service" \
   --description "Version 1" \
-  --compatible-environment-template-major-version-arns arn:aws:proton:us-west-2:${account_id}:environment-template/public-vpc:1
+  --compatible-environment-template-major-version-arns arn:aws:proton:us-west-2:${account_id}:environment-template/crud-api:1
 ```
 
 Now that we have our major version defined, we can create a minor version which contains the contents of our service template. Let's tar our service templates and set up our minor version:
@@ -160,11 +161,11 @@ Now that we have our major version defined, we can create a minor version which 
 ```
 tar -zcvf svc-template.tar.gz service/ && aws s3 cp svc-template.tar.gz s3://proton-cli-templates-${account_id}/svc-template.tar.gz && rm svc-template.tar.gz
 
-aws proton-preview \
+aws proton \
   --endpoint-url https://proton.us-west-2.amazonaws.com \
   --region us-west-2 \
   create-service-template-minor-version \
-  --template-name "lb-fargate-service" \
+  --template-name "crud-api-service" \
   --description "Version 1" \
   --major-version-id "1" \
   --source-s3-bucket proton-cli-templates-${account_id} \
@@ -174,11 +175,11 @@ aws proton-preview \
 Now let's wait for the service template minor version to be registered:
 
 ```
-aws proton-preview \
+aws proton \
   --endpoint-url https://proton.us-west-2.amazonaws.com \
   --region us-west-2 \
   wait service-template-registration-complete \
-  --template-name "lb-fargate-service" \
+  --template-name "crud-api-service" \
   --major-version-id "1" \
   --minor-version-id "0"
 ```
@@ -186,11 +187,11 @@ aws proton-preview \
 If we're happy with our template, we can "publish" it, making it available for developers to use.
 
 ```
-aws proton-preview \
+aws proton \
   --endpoint-url https://proton.us-west-2.amazonaws.com \
   --region us-west-2 \
   update-service-template-minor-version \
-  --template-name "lb-fargate-service" \
+  --template-name "crud-api-service" \
   --major-version-id "1" \
   --minor-version-id "0" \
   --status "PUBLISHED"
@@ -203,12 +204,12 @@ Now that we've got our environment and service templates registered and publish,
 Let's deploy our environment. This command will read your environment spec at `specs/env-spec.yaml`, merges it with the environment template we created above, and deploys it to your account using the Proton roles we setup at the start of this guide.
 
 ```
-aws proton-preview \
+aws proton \
   --endpoint-url https://proton.us-west-2.amazonaws.com \
   --region us-west-2 \
   create-environment \
-  --environment-name "Beta" \
-  --environment-template-arn arn:aws:proton:us-west-2:${account_id}:environment-template/public-vpc \
+  --environment-name "crud-api-beta" \
+  --environment-template-arn arn:aws:proton:us-west-2:${account_id}:environment-template/crud-api \
   --template-major-version-id 1 \
   --proton-service-role-arn arn:aws:iam::${account_id}:role/ProtonServiceRole \
   --spec file://specs/env-spec.yaml
@@ -217,25 +218,25 @@ aws proton-preview \
 After we create our environment, let's wait for it to get deployed.
 
 ```
-aws proton-preview \
+aws proton \
   --endpoint-url https://proton.us-west-2.amazonaws.com \
   --region us-west-2 \
   wait environment-deployment-complete \
-  --environment-name "Beta"
+  --environment-name "crud-api-beta"
 ```
 
 Now let's do the same thing to create our service and pipeline. We'll provide a codestar connection, repository branch and repo in this example. If you don't have those handy, you can use the dummy values below - but your pipeline won't work.
 
 ```
-aws proton-preview \
+aws proton \
   --endpoint-url https://proton.us-west-2.amazonaws.com \
   --region us-west-2 \
   create-service \
-  --service-name "front-end" \
+  --service-name "tasks-front-end" \
   --branch "main" \
   --repository-connection-arn arn:aws:codestar-connections:us-west-2:${account_id}:connection/YOUR-CODESTAR-CONNECTION \
   --repository-id "YOUROWNER/YOURREPO" \
   --template-major-version-id 1 \
-  --service-template-arn arn:aws:proton:us-west-2:{account_id}:service-template/lb-fargate-service \
+  --service-template-arn arn:aws:proton:us-west-2:{account_id}:service-template/crud-api-service     \
   --spec file://specs/svc-spec.yaml
 ```
