@@ -7,7 +7,7 @@ Developers provisioning their services can configure the services:
 * Fargate memory size
 * Service count
 
-# Registering and deploying these templates - CONSOLE
+# Registering and deploying these templates
 
 You can register and deploy these templates by using the AWS Proton console. To do this, you will need to compress the templates using the instructions below, upload them to an S3 bucket, and use the Proton console to register and test them. If you prefer to use the Command Line Interface, follow the instructions below:
 
