@@ -1,0 +1,3 @@
+proton: EnvironmentSpec
+spec:
+  ttl_attribute: ttl
