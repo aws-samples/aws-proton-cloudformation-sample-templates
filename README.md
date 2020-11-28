@@ -1,11 +1,8 @@
-## My Project
+## AWS Proton sample templates
 
-TODO: Fill this README out!
+This repository is a curated list of sample templates to use with AWS Proton. AWS Proton is an application delivery service available at aws.amazon.com/proton
 
-Be sure to:
-
-* Change the title in this README
-* Edit your repository description on GitHub
+To use this repository, browse to the folder that corresponds to the template that you want to use. You will find there all the information you need to create environment and service templates and to deploy the corresponding environments and services. You will also find a link to a repository with basic code that runs on each one of them, in case you want to fork it to use it as the basis for your deployment.
 
 ## Security
 
