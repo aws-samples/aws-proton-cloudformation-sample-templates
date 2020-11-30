@@ -2,8 +2,7 @@ proton: ServiceSpec
 
 pipeline:
   unit_test_command: make test
-  packaging_commands:
-    - make publish
+  packaging_commands: make publish
 
 instances:
   - name: "front-end"
