@@ -33,9 +33,11 @@ schema:
           maxLength: 200
         unique_name:
           type: string
-          description: "The name of the service instance"
+          description: "The unique name of your service identifier. This will be used to name your log group, task definition and ECS service"
           minLength: 1
           maxLength: 100
+      required:
+        - unique_name
 
     PipelineInputs:
       type: object

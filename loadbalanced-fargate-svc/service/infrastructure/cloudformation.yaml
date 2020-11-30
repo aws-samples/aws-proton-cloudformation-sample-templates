@@ -297,3 +297,7 @@ Resources:
       LoadBalancerArn: !Ref 'PublicLoadBalancer'
       Port: 80
       Protocol: HTTP
+Outputs:
+  ServiceEndpoint:
+    Description: The URL to access the service
+    Value: !GetAtt PublicLoadBalancer.DNSName

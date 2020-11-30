@@ -20,7 +20,7 @@ schema:
           description: "The handler path to find the CRUD methods for this API"
           minLength: 1
           maxLength: 50
-          default: "api"
+          default: "src/api"
         lambda_memory:
           type: number
           description: "The size of your Lambda functions in MB"
@@ -54,9 +54,10 @@ schema:
           default: "echo 'add your unit test command here'"
           minLength: 1
           maxLength: 200
-        packaging_commands:
-          type: array
+        packaging_command:
+          type: string
           description: "The commands which packages your code into a file called function.zip"
-          items:
-            type: string
-            pattern: ^[^\n]*$
+          default: "make publish"
+          minLength: 1
+          maxLength: 200
+

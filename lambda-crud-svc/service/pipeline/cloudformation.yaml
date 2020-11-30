@@ -56,8 +56,8 @@ Resources:
                       ]
                     },
                     "build": {
-                      "commands": [ {% for pkg_command in pipeline.packaging_commands%}
-                        "{{pkg_command}}",{% endfor %}
+                      "commands": [
+                        "{{ pipeline.packaging_command }}",
                         "FUNCTION_URI=s3://$bucket_name/$CODEBUILD_BUILD_NUMBER/function.zip",
                         "aws s3 cp function.zip $FUNCTION_URI"
                       ]

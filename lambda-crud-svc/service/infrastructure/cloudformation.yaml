@@ -110,3 +110,7 @@ Resources:
             Path: "/{{service_instance.resource_name}}/{id}"
             Method: PATCH
 {% endif %}
+Outputs:
+  HttpApiEndpoint:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${CrudHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
