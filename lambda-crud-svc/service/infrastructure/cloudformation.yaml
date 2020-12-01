@@ -113,4 +113,4 @@ Resources:
 Outputs:
   HttpApiEndpoint:
     Description: "API Gateway endpoint URL for Prod stage"
-    Value: !Sub "https://${CrudHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+    Value: !Sub "https://${CrudHttpApi}.execute-api.${AWS::Region}.amazonaws.com/{{service_instance.resource_name}}"

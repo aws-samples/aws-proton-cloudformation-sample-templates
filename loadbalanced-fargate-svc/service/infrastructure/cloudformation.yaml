@@ -300,4 +300,4 @@ Resources:
 Outputs:
   ServiceEndpoint:
     Description: The URL to access the service
-    Value: !GetAtt PublicLoadBalancer.DNSName
+    Value: !Sub "http://${PublicLoadBalancer.DNSName}"
