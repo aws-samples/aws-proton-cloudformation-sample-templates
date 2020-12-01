@@ -28,7 +28,7 @@ schema:
         image:
           type: string
           description: "The name/url of the container image"
-          default: "nginx"
+          default: "public.ecr.aws/z9d2n7e1/nginx:1.19.5"
           minLength: 1
           maxLength: 200
         unique_name:
