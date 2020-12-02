@@ -603,7 +603,7 @@ Resources:
                   Ref: Deploy{{loop.index}}Project
               InputArtifacts:
                 - Name: BuildOutput
-              Name: 'Deploy-{{service_instance.name}}'
+              Name: Deploy
               RoleArn:
                 Fn::GetAtt:
                   - PipelineDeployCodePipelineActionRole
