@@ -611,7 +611,7 @@ Resources:
                   - PipelineDeployCodePipelineActionRole
                   - Arn
               RunOrder: 1
-          Name: 'Deploy{{service_instances.name}}'
+          Name: 'Deploy{{service_instance.name}}'
 {%- endfor %}
       ArtifactStore:
         EncryptionKey:
