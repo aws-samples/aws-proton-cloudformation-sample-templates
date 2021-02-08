@@ -36,8 +36,16 @@ schema:
           description: "The unique name of your service identifier. This will be used to name your log group, task definition and ECS service"
           minLength: 1
           maxLength: 100
+        domain_name:
+          type: string
+          description: "The domain name of your service endpoint"
+        hosted_zone_id:
+          type: string
+          description: "The Route 53 hosted zone ID that will be created your domain_name"
       required:
         - unique_name
+        - domain_name
+        - hosted_zone_id
 
     PipelineInputs:
       type: object

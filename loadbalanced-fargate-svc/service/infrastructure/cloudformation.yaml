@@ -295,9 +295,35 @@ Resources:
         - TargetGroupArn: !Ref 'TargetGroup'
           Type: 'forward'
       LoadBalancerArn: !Ref 'PublicLoadBalancer'
-      Port: 80
-      Protocol: HTTP
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn:
+            !Ref PublicLoadBalancerCertificate
+
+  PublicLoadBalancerCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: '{{service_instance.domain_name}}'
+      DomainValidationOptions:
+        - DomainName: '{{service_instance.domain_name}}'
+          HostedZoneId: '{{service_instance.hosted_zone_id}}'
+      ValidationMethod: DNS
+
+  PublicLoadBalancerAliasRecord:
+    Type: AWS::Route53::RecordSet
+    DependsOn:
+      - PublicLoadBalancer
+    Properties:
+      AliasTarget:
+        DNSName: !GetAtt PublicLoadBalancer.DNSName
+        EvaluateTargetHealth: false
+        HostedZoneId: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
+      HostedZoneId: '{{service_instance.hosted_zone_id}}'
+      Name: '{{service_instance.domain_name}}'
+      Type: A
+
 Outputs:
   ServiceEndpoint:
     Description: The URL to access the service
-    Value: !Sub "http://${PublicLoadBalancer.DNSName}"
+    Value: !Sub "https://{{service_instance.domain_name}}"
