@@ -35,7 +35,7 @@ schema:
           type: string
           description: "The unique name of your service identifier. This will be used to name your log group, task definition and ECS service"
           minLength: 1
-          maxLength: 100
+          maxLength: 32
       required:
         - unique_name
 
