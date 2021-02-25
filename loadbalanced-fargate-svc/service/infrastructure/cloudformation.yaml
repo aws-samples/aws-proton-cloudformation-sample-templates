@@ -22,14 +22,14 @@ Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: '{{service_instance.unique_name}}'
+      LogGroupName: '{{service_name}}/{{service_instance_name}}'
 
   # The task definition. This is a simple metadata description of what
   # container to run, and what resource requirements it has.
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: '{{service_instance.unique_name}}'
+      Family: '{{service_name}}_{{service_instance_name}}'
       Cpu: !FindInMap [TaskSize, {{service_instance.task_size}}, cpu]
       Memory: !FindInMap [TaskSize, {{service_instance.task_size}}, memory]
       NetworkMode: awsvpc
@@ -38,7 +38,7 @@ Resources:
       ExecutionRoleArn: '{{environment.ECSTaskExecutionRole}}'
       TaskRoleArn: !Ref "AWS::NoValue"
       ContainerDefinitions:
-        - Name: '{{service_instance.unique_name}}'
+        - Name: '{{service_instance_name}}'
           Cpu: !FindInMap [TaskSize, {{service_instance.task_size}}, cpu]
           Memory: !FindInMap [TaskSize, {{service_instance.task_size}}, memory]
           Image: '{{service_instance.image}}'
@@ -47,9 +47,9 @@ Resources:
           LogConfiguration:
             LogDriver: 'awslogs'
             Options:
-              awslogs-group: '{{service_instance.unique_name}}'
+              awslogs-group: '{{service_name}}/{{service_instance_name}}'
               awslogs-region: !Ref 'AWS::Region'
-              awslogs-stream-prefix: '{{service_instance.unique_name}}'
+              awslogs-stream-prefix: '{{service_name}}/{{service_instance_name}}'
 
   # The service_instance. The service is a resource which allows you to run multiple
   # copies of a type of task, and gather up their logs and metrics, as well
@@ -58,7 +58,7 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn: LoadBalancerRule
     Properties:
-      ServiceName: '{{service_instance.unique_name}}'
+      ServiceName: '{{service_name}}_{{service_instance_name}}'
       Cluster: '{{environment.ClusterName}}'
       LaunchType: FARGATE
       DeploymentConfiguration:
@@ -75,7 +75,7 @@ Resources:
             - '{{environment.PublicSubnetTwo}}'
       TaskDefinition: !Ref 'TaskDefinition'
       LoadBalancers:
-        - ContainerName: '{{service_instance.unique_name}}'
+        - ContainerName: '{{service_instance_name}}'
           ContainerPort: '{{service_instance.port}}'
           TargetGroupArn: !Ref 'TargetGroup'
 
@@ -93,7 +93,10 @@ Resources:
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
       TargetType: ip
-      Name: '{{service_instance.unique_name}}'
+      # Note that the Name property has a 32 character limit, which could be
+      # reached by using either {{service_name}}, {{service_instance_name}}
+      # or a combination of both as we're doing here
+      Name: '{{service_name}}--{{service_instance_name}}'
       Port: '{{service_instance.port}}'
       Protocol: HTTP
       UnhealthyThresholdCount: 2
@@ -125,7 +128,7 @@ Resources:
           - '/'
           - - service
             - '{{environment.ClusterName}}'
-            - '{{service_instance.unique_name}}'
+            - '{{service_name}}_{{service_instance_name}}'
       MinCapacity: 1
       MaxCapacity: 10
       RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
@@ -139,7 +142,7 @@ Resources:
         Fn::Join:
           - '/'
           - - scale
-            - '{{service_instance.unique_name}}'
+            - '{{service_name}}_{{service_instance_name}}'
             - down
       PolicyType: StepScaling
       ResourceId:
@@ -147,7 +150,7 @@ Resources:
           - '/'
           - - service
             - '{{environment.ClusterName}}'
-            - '{{service_instance.unique_name}}'
+            - '{{service_name}}_{{service_instance_name}}'
       ScalableDimension: 'ecs:service:DesiredCount'
       ServiceNamespace: 'ecs'
       StepScalingPolicyConfiguration:
@@ -166,7 +169,7 @@ Resources:
         Fn::Join:
           - '/'
           - - scale
-            - '{{service_instance.unique_name}}'
+            - '{{service_name}}_{{service_instance_name}}'
             - up
       PolicyType: StepScaling
       ResourceId:
@@ -174,7 +177,7 @@ Resources:
           - '/'
           - - service
             - '{{environment.ClusterName}}'
-            - '{{service_instance.unique_name}}'
+            - '{{service_name}}_{{service_instance_name}}'
       ScalableDimension: 'ecs:service:DesiredCount'
       ServiceNamespace: 'ecs'
       StepScalingPolicyConfiguration:
@@ -199,17 +202,17 @@ Resources:
         Fn::Join:
           - '-'
           - - low-cpu
-            - '{{service_instance.unique_name}}'
+            - '{{service_name}}_{{service_instance_name}}'
       AlarmDescription:
         Fn::Join:
           - ' '
           - - "Low CPU utilization for service"
-            - '{{service_instance.unique_name}}'
+            - '{{service_name}}_{{service_instance_name}}'
       MetricName: CPUUtilization
       Namespace: AWS/ECS
       Dimensions:
         - Name: ServiceName
-          Value: '{{service_instance.unique_name}}'
+          Value: '{{service_name}}_{{service_instance_name}}'
         - Name: ClusterName
           Value:
             '{{environment.ClusterName}}'
@@ -228,17 +231,17 @@ Resources:
         Fn::Join:
           - '-'
           - - high-cpu
-            - '{{service_instance.unique_name}}'
+            - '{{service_name}}_{{service_instance_name}}'
       AlarmDescription:
         Fn::Join:
           - ' '
           - - "High CPU utilization for service"
-            - '{{service_instance.unique_name}}'
+            - '{{service_name}}_{{service_instance_name}}'
       MetricName: CPUUtilization
       Namespace: AWS/ECS
       Dimensions:
         - Name: ServiceName
-          Value: '{{service_instance.unique_name}}'
+          Value: '{{service_name}}_{{service_instance_name}}'
         - Name: ClusterName
           Value:
             '{{environment.ClusterName}}'
