@@ -93,6 +93,11 @@ Resources:
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
       TargetType: ip
+      # Note that the Name property has a 32 character limit, which could be
+      # reached by using either {{service_name}}, {{service_instance_name}}
+      # or a combination of both as we're doing here, so we truncate the name to 29 characters
+      # plus an ellipsis different from '...' or '---' to avoid running into errors.
+      Name: '{{(service_name~"--"~service_instance_name)|truncate(29, true, 'zzz')}}'      
       Port: '{{service_instance.port}}'
       Protocol: HTTP
       UnhealthyThresholdCount: 2
