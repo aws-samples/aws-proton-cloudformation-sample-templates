@@ -1,0 +1,105 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy a backend service on AWS Fargate, hosted in a private subnet, and accessible via Service Discovery.
+Mappings:
+  EnvironmentNameConfig:
+    Environment: 
+      Name: '{{ environment.environment_name_tag}}'
+  TaskSize:
+    x-small:
+      cpu: 256
+      memory: 512
+    small:
+      cpu: 512
+      memory: 1024
+    medium:
+      cpu: 1024
+      memory: 2048
+    large:
+      cpu: 2048
+      memory: 4096
+    x-large:
+      cpu: 4096
+      memory: 8192
+Resources:
+  # Register service in ServiceDiscovery Service
+  DiscoveryService:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Description: Discovery Service for the Demo Application
+      DnsConfig:
+        RoutingPolicy: MULTIVALUE
+        DnsRecords:
+          - TTL: 60
+            Type: A
+          - TTL: 60
+            Type: SRV
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+      Name: '{{service_instance.service_discovery_name}}'
+      NamespaceId: '{{environment.PrivateNamespace}}'
+  # A log group for storing the stdout logs from this service's containers
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: '{{service_name}}/{{service_instance_name}}'
+
+  # The task definition. This is a simple metadata description of what
+  # container to run, and what resource requirements it has.
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: '{{service_name}}_{{service_instance_name}}'
+      Cpu: !FindInMap [TaskSize, {{service_instance.task_size}}, cpu]
+      Memory: !FindInMap [TaskSize, {{service_instance.task_size}}, memory]
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: '{{environment.ECSTaskExecutionRole}}'
+      TaskRoleArn: !Ref "AWS::NoValue"
+      ContainerDefinitions:
+        - Name: '{{service_instance_name}}'
+          Cpu: !FindInMap [TaskSize, {{service_instance.task_size}}, cpu]
+          Memory: !FindInMap [TaskSize, {{service_instance.task_size}}, memory]
+          Image: '{{service_instance.image}}'
+          PortMappings:
+            - ContainerPort: '{{service_instance.port}}'
+          LogConfiguration:
+            LogDriver: 'awslogs'
+            Options:
+              awslogs-group: '{{service_name}}/{{service_instance_name}}'
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: '{{service_name}}/{{service_instance_name}}'
+      Tags: 
+        - Key: Name 
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+  # The service_instance. The service is a resource which allows you to run multiple
+  # copies of a type of task, and gather up their logs and metrics, as well
+  # as monitor the number of running tasks and replace any that have crashed
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: '{{service_name}}_{{service_instance_name}}'
+      Cluster: '{{environment.ClusterName}}'
+      LaunchType: FARGATE
+      DesiredCount: '{{service_instance.desired_count}}'
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - '{{environment.ContainerSecurityGroup}}'
+          Subnets:
+            - '{{environment.PrivateSubnetOne}}'
+            - '{{environment.PrivateSubnetTwo}}'
+      TaskDefinition: !Ref 'TaskDefinition'
+      ServiceRegistries:
+      - RegistryArn: !GetAtt DiscoveryService.Arn
+        Port: 8080
+      Tags: 
+        - Key: Name 
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+Outputs:
+  ServiceDiscovery:
+    Description: The registered service discovery Service Id
+    Value: !Ref DiscoveryService
