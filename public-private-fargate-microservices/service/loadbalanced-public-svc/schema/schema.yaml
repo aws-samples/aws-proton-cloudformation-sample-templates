@@ -31,18 +31,12 @@ schema:
           default: "public.ecr.aws/z9d2n7e1/nginx:1.19.5"
           minLength: 1
           maxLength: 200
-        unique_name:
-          type: string
-          description: "The unique name of your service identifier. This will be used to name your log group, task definition and ECS service"
-          minLength: 1
-          maxLength: 100
         service_discovery_name:
           type: string
           description: "The name of the service to register in service discovery"
           minLength: 3
           maxLength: 24
       required:
-        - unique_name
         - service_discovery_name
 
     PipelineInputs:

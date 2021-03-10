@@ -41,14 +41,14 @@ Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: '{{service_instance.unique_name}}'
+      LogGroupName: '{{service_name}}/{{service_instance_name}}'
 
   # The task definition. This is a simple metadata description of what
   # container to run, and what resource requirements it has.
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: '{{service_instance.unique_name}}'
+      Family: '{{service_name}}_{{service_instance_name}}'
       Cpu: !FindInMap [TaskSize, {{service_instance.task_size}}, cpu]
       Memory: !FindInMap [TaskSize, {{service_instance.task_size}}, memory]
       NetworkMode: awsvpc
@@ -57,7 +57,7 @@ Resources:
       ExecutionRoleArn: '{{environment.ECSTaskExecutionRole}}'
       TaskRoleArn: !Ref "AWS::NoValue"
       ContainerDefinitions:
-        - Name: '{{service_instance.unique_name}}'
+        - Name: '{{service_instance_name}}'
           Cpu: !FindInMap [TaskSize, {{service_instance.task_size}}, cpu]
           Memory: !FindInMap [TaskSize, {{service_instance.task_size}}, memory]
           Image: '{{service_instance.image}}'
@@ -66,9 +66,9 @@ Resources:
           LogConfiguration:
             LogDriver: 'awslogs'
             Options:
-              awslogs-group: '{{service_instance.unique_name}}'
+              awslogs-group: '{{service_name}}/{{service_instance_name}}'
               awslogs-region: !Ref 'AWS::Region'
-              awslogs-stream-prefix: '{{service_instance.unique_name}}'
+              awslogs-stream-prefix: '{{service_name}}/{{service_instance_name}}'
       Tags: 
         - Key: Name 
           Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
@@ -79,7 +79,7 @@ Resources:
   Service:
     Type: AWS::ECS::Service
     Properties:
-      ServiceName: '{{service_instance.unique_name}}'
+      ServiceName: '{{service_name}}_{{service_instance_name}}'
       Cluster: '{{environment.ClusterName}}'
       LaunchType: FARGATE
       DesiredCount: '{{service_instance.desired_count}}'
