@@ -28,9 +28,14 @@ Resources:
       TimeToLiveSpecification:
         AttributeName: "{{ environment.ttl_attribute }}"
         Enabled: true
-{% endif %}
+{% endif %}  
+  AppBucket:
+    Type: AWS::S3::Bucket
 # These output values will be available to service templates to use.
 Outputs:
   TableName:
     Description: The DDB table to be used for all CRUD services
     Value: !Ref 'AppTable'
+  AppBucketArn:
+    Description: The Bucket used for data processing
+    Value: !GetAtt AppBucket.Arn
