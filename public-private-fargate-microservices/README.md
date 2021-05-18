@@ -374,7 +374,7 @@ aws proton-preview create-service \
   --repository-id "<your-source-repo-account>/<your-repository-name>" \
   --branch "main" \
   --template-major-version-id 1 \
-  --service-template-arn arn:aws:proton:us-east-2:${account_id}:service-template/lb-private-fargate-svc \
+  --service-template-arn arn:aws:proton:us-east-2:${account_id}:service-template/private-fargate-svc \
   --spec file://specs/svc-private-spec.yaml
 ```
 
