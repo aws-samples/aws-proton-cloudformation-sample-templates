@@ -36,8 +36,8 @@ Resources:
                         "docker": 18
                       },
                       "commands": [
-                        "aws s3 cp s3://aws-proton-preview-public-files/model/proton-2020-07-20.normal.json .",
-                        "aws s3 cp s3://aws-proton-preview-public-files/model/waiters2.json .",
+                        "aws s3 cp s3://aws-proton-preview-public-files/model/5-19-2021/proton-2020-07-20.normal.json .",
+                        "aws s3 cp s3://aws-proton-preview-public-files/model/5-19-2021/waiters2.json .",
                         "aws configure add-model --service-model file://proton-2020-07-20.normal.json --service-name proton-preview",
                         "mv waiters2.json ~/.aws/models/proton-preview/2020-07-20/waiters-2.json",
                         "echo 'f6bd1536a743ab170b35c94ed4c7c4479763356bd543af5d391122f4af852460  yq_linux_amd64' > yq_linux_amd64.sha",
@@ -114,8 +114,8 @@ Resources:
             "phases": {
               "install": {
                 "commands": [
-                  "aws s3 cp s3://aws-proton-preview-public-files/model/proton-2020-07-20.normal.json .",
-                  "aws s3 cp s3://aws-proton-preview-public-files/model/waiters2.json .",
+                  "aws s3 cp s3://aws-proton-preview-public-files/model/5-19-2021/proton-2020-07-20.normal.json .",
+                  "aws s3 cp s3://aws-proton-preview-public-files/model/5-19-2021/waiters2.json .",
                   "aws configure add-model --service-model file://proton-2020-07-20.normal.json --service-name proton-preview",
                   "mv waiters2.json ~/.aws/models/proton-preview/2020-07-20/waiters-2.json"
                 ]

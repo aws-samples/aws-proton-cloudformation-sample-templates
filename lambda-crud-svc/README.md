@@ -27,8 +27,8 @@ account_id=`aws sts get-caller-identity|jq -r ".Account"`
 While AWS Proton is in Preview, you will need to manually configure the AWS CLI. The following commands will add the Proton commands to the AWS CLI.
 
 ```
-aws s3 cp s3://aws-proton-preview-public-files/model/proton-2020-07-20.normal.json .
-aws s3 cp s3://aws-proton-preview-public-files/model/waiters2.json .
+aws s3 cp s3://aws-proton-preview-public-files/model/5-19-2021/proton-2020-07-20.normal.json .
+aws s3 cp s3://aws-proton-preview-public-files/model/5-19-2021/waiters2.json .
 aws configure add-model --service-model file://proton-2020-07-20.normal.json --service-name proton-preview
 mv waiters2.json ~/.aws/models/proton-preview/2020-07-20/waiters-2.json
 rm proton-2020-07-20.normal.json

@@ -1,3 +1,7 @@
+## READ THIS
+
+Proton is making breaking API changes in preparation for our launch into the SDK.  The rollout will take place May 26-early June.  If Proton doesn't work using the instructions from the `main` branch, please try this, as the region you are targeting may not have been deployed to yet.
+
 ## AWS Proton sample templates
 
 This repository is a curated list of sample templates to use with AWS Proton. AWS Proton is an application delivery service available at [aws.amazon.com/proton](https://aws.amazon.com/proton).
