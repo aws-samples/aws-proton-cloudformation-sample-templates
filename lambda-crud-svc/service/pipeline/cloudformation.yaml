@@ -64,7 +64,7 @@ Resources:
                     },
                     "post_build": {
                       "commands": [
-                        "aws proton-preview --endpoint-url https://proton.$AWS_DEFAULT_REGION.amazonaws.com --region $AWS_DEFAULT_REGION get-service --service-name $service_name | jq -r .service.spec > service.yaml",
+                        "aws proton-preview --endpoint-url https://proton.$AWS_DEFAULT_REGION.amazonaws.com --region $AWS_DEFAULT_REGION get-service --name-name $service_name | jq -r .service.spec > service.yaml",
                         "yq w service.yaml 'instances[*].spec.code_uri' \"$FUNCTION_URI\" > rendered_service.yaml"
                       ]
                     }
@@ -117,8 +117,8 @@ Resources:
               },
               "build": {
                 "commands": [
-                  "aws proton-preview --endpoint-url https://proton.$AWS_DEFAULT_REGION.amazonaws.com --region $AWS_DEFAULT_REGION update-service-instance --version-update-type UPDATE_SPEC --service-instance-name $service_instance_name --service-name $service_name --spec file://rendered_service.yaml",
-                  "aws proton-preview --endpoint-url https://proton.$AWS_DEFAULT_REGION.amazonaws.com --region $AWS_DEFAULT_REGION wait service-instance-update-complete --service-instance-name $service_instance_name --service-name $service_name"
+                  "aws proton-preview --endpoint-url https://proton.$AWS_DEFAULT_REGION.amazonaws.com --region $AWS_DEFAULT_REGION update-service-instance --deployment-type CURRENT_VERSION --name $service_instance_name --service-name $service_name --spec file://rendered_service.yaml",
+                  "aws proton-preview --endpoint-url https://proton.$AWS_DEFAULT_REGION.amazonaws.com --region $AWS_DEFAULT_REGION wait service-instance-update-complete --name $service_instance_name --service-name $service_name"
                 ]
               }
             }
