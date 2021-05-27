@@ -1,3 +1,13 @@
+## IMPORTANT
+
+Proton is making breaking API changes strating in 5/21/2021 in preparation for launching into the SDK.  For more information, visit our [migration guide](https://docs.aws.amazon.com/proton/latest/adminguide/ga-api-migration.html).  If possible, we recommend using the console, which won't have a disruption in service, or wait until we launch in the SDK.
+
+If you want to keep using the CLI, at some point it will stop working.  The instructions on this branch have been updated to include the API changes, which are detailed in the [migration guide](https://docs.aws.amazon.com/proton/latest/adminguide/ga-api-migration.html).
+
+If this doesn't work for you, it's likely that Proton hasn't rolled out the API changes to your region.  In that case, go to the `old-api` [branch](https://github.com/aws-samples/aws-proton-sample-templates/tree/old-api) and use the instructions from there.
+
+Once we are launched in the official AWS SDK and CLI, we will update this repo to use standard practices.  For our loyal customers, we appreciate you, sorry for any trouble, and we hope you enjoy the new API.
+
 ## AWS Proton sample templates
 
 This repository is a curated list of sample templates to use with AWS Proton. AWS Proton is an application delivery service available at [aws.amazon.com/proton](https://aws.amazon.com/proton).

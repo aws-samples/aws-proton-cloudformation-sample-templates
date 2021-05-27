@@ -96,7 +96,7 @@ aws proton-preview \
   --endpoint-url https://proton.us-east-2.amazonaws.com \
   --region us-east-2 \
   create-environment-template \
-  --template-name "aws-proton-fargate-microservices" \
+  --name "aws-proton-fargate-microservices" \
   --display-name "aws proton fargate microservices" \
   --description "Proton Example Dev VPC with Public facing services and with Private backend services on ECS cluster with Fargate compute"
 ```
@@ -127,7 +127,7 @@ aws proton-preview \
   create-environment-template-minor-version \
   --template-name "aws-proton-fargate-microservices" \
   --description "Proton Example Dev Environment Version 1" \
-  --major-version-id "1" \
+  --major-version "1" \
   --source-s3-bucket proton-cli-templates-${account_id} \
   --source-s3-key env-template.tar.gz
 ```
@@ -138,8 +138,8 @@ Wait for the environment template minor version to be successfully registered:
 aws proton-preview wait environment-template-registration-complete \
   --region us-east-2 \
   --template-name "aws-proton-fargate-microservices" \
-  --major-version-id "1" \
-  --minor-version-id "0"
+  --major-version "1" \
+  --minor-version "0"
 ```
 
 You can now publish the environment template minor version, making it available for users in your AWS account to create Proton environments.
@@ -150,8 +150,8 @@ aws proton-preview \
   --region us-east-2 \
   update-environment-template-minor-version \
   --template-name "aws-proton-fargate-microservices" \
-  --major-version-id "1" \
-  --minor-version-id "0" \
+  --major-version "1" \
+  --minor-version "0" \
   --status "PUBLISHED"
 ```
 
@@ -198,7 +198,7 @@ aws proton-preview \
   create-service-template-minor-version \
   --template-name "lb-public-fargate-svc" \
   --description "Version 1" \
-  --major-version-id "1" \
+  --major-version "1" \
   --source-s3-bucket proton-cli-templates-${account_id} \
   --source-s3-key svc-private-template.tar.gz
 ```
@@ -211,8 +211,8 @@ aws proton-preview \
   --region us-east-2 \
   wait service-template-registration-complete \
   --template-name "lb-public-fargate-svc" \
-  --major-version-id "1" \
-  --minor-version-id "0"
+  --major-version "1" \
+  --minor-version "0"
 ```
 
 You can now publish the Public service template minor version, making it available for users in your AWS account to create Proton services.
@@ -223,8 +223,8 @@ aws proton-preview \
   --region us-east-2 \
   update-service-template-minor-version \
   --template-name "lb-public-fargate-svc" \
-  --major-version-id "1" \
-  --minor-version-id "0" \
+  --major-version "1" \
+  --minor-version "0" \
   --status "PUBLISHED"
 ```
 
@@ -267,7 +267,7 @@ aws proton-preview \
   create-service-template-minor-version \
   --template-name "private-fargate-svc" \
   --description "Version 1" \
-  --major-version-id "1" \
+  --major-version "1" \
   --source-s3-bucket proton-cli-templates-${account_id} \
   --source-s3-key svc-private-template.tar.gz
 ```
@@ -280,8 +280,8 @@ aws proton-preview \
   --region us-east-2 \
   wait service-template-registration-complete \
   --template-name "private-fargate-svc" \
-  --major-version-id "1" \
-  --minor-version-id "0"
+  --major-version "1" \
+  --minor-version "0"
 ```
 
 You can now publish the Public service template minor version, making it available for users in your AWS account to create Proton services.
@@ -292,8 +292,8 @@ aws proton-preview \
   --region us-east-2 \
   update-service-template-minor-version \
   --template-name "private-fargate-svc" \
-  --major-version-id "1" \
-  --minor-version-id "0" \
+  --major-version "1" \
+  --minor-version "0" \
   --status "PUBLISHED"
 ```
 
@@ -306,9 +306,9 @@ First, deploy a Proton environment. This command reads your environment spec at 
 ```
 aws proton-preview create-environment \
   --region us-east-2 \
-  --environment-name "Beta" \
-  --environment-template-arn arn:aws:proton:us-east-2:${account_id}:environment-template/aws-proton-fargate-microservices \
-  --template-major-version-id 1 \
+  --name "Beta" \
+  --template-name aws-proton-fargate-microservices \
+  --template-major-version 1 \
   --proton-service-role-arn arn:aws:iam::${account_id}:role/ProtonServiceRole \
   --spec file://specs/env-spec.yaml
 ```
@@ -318,7 +318,7 @@ Wait for the environment to successfully deploy.
 ```
 aws proton-preview wait environment-deployment-complete \
   --region us-east-2 \
-  --environment-name "Beta"
+  --name "Beta"
 ```
 
 Then, create a Public Proton service and deploy it into your Proton environment.  This command reads your service spec at `specs/svc-public-spec.yaml`, merges it with the service template created above, and deploys the resources in CloudFormation stacks in your AWS account using the Proton service role.  The service will provision a load-balanced ECS service running on Fargate and a CodePipeline pipeline to deploy your application code.
@@ -328,12 +328,12 @@ Fill in your CodeStar Connections connection ID and your source code repository 
 ```
 aws proton-preview create-service \
   --region us-east-2 \
-  --service-name "front-end" \
+  --name "front-end" \
   --repository-connection-arn arn:aws:codestar-connections:us-east-2:${account_id}:connection/<your-codestar-connection-id> \
   --repository-id "<your-source-repo-account>/<your-repository-name>" \
   --branch "main" \
-  --template-major-version-id 1 \
-  --service-template-arn arn:aws:proton:us-east-2:${account_id}:service-template/lb-public-fargate-svc \
+  --template-major-version 1 \
+  --template-name lb-public-fargate-svc \
   --spec file://specs/svc-public-spec.yaml
 ```
 
@@ -342,24 +342,7 @@ Wait for the service to successfully deploy.
 ```
 aws proton-preview wait service-creation-complete \
   --region us-east-2 \
-  --service-name "front-end"
-```
-
-Once the service is created, retrieve the CodePipeline pipeline console URL and the CRUD API endpoint URL for your service.
-
-```
-aws proton-preview get-service \
-  --region us-east-2 \
-  --service-name "front-end" \
-  --query "service.pipeline.outputs" \
-  --output text
-
-aws proton-preview get-service-instance \
-  --region us-east-2 \
-  --service-name "front-end" \
-  --service-instance-name "frontend-dev" \
-  --query "serviceInstance.outputs" \
-  --output text
+  --name "front-end"
 ```
 
 And finally, create a Private Proton service and deploy it into your Proton environment.  This command reads your service spec at `specs/svc-private-spec.yaml`, merges it with the service template created above, and deploys the resources in CloudFormation stacks in your AWS account using the Proton service role. The service will provision a private ECS service running on Fargate and a CodePipeline pipeline to deploy your application code.
@@ -369,12 +352,12 @@ Fill in your CodeStar Connections connection ID and your source code repository 
 ```
 aws proton-preview create-service \
   --region us-east-2 \
-  --service-name "back-end" \
+  --name "back-end" \
   --repository-connection-arn arn:aws:codestar-connections:us-east-2:${account_id}:connection/<your-codestar-connection-id> \
   --repository-id "<your-source-repo-account>/<your-repository-name>" \
   --branch "main" \
-  --template-major-version-id 1 \
-  --service-template-arn arn:aws:proton:us-east-2:${account_id}:service-template/lb-private-fargate-svc \
+  --template-major-version 1 \
+  --template-name private-fargate-svc \
   --spec file://specs/svc-private-spec.yaml
 ```
 
@@ -383,22 +366,5 @@ Wait for the service to successfully deploy.
 ```
 aws proton-preview wait service-creation-complete \
   --region us-east-2 \
-  --service-name "back-end"
-```
-
-Once the service is created, retrieve the CodePipeline pipeline console URL and the CRUD API endpoint URL for your service.
-
-```
-aws proton-preview get-service \
-  --region us-east-2 \
-  --service-name "back-end" \
-  --query "service.pipeline.outputs" \
-  --output text
-
-aws proton-preview get-service-instance \
-  --region us-east-2 \
-  --service-name "back-end" \
-  --service-instance-name "backend-dev" \
-  --query "serviceInstance.outputs" \
-  --output text
+  --name "back-end"
 ```

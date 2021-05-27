@@ -112,7 +112,7 @@ aws proton-preview create-environment-template-minor-version \
   --region us-west-2 \
   --template-name "multi-svc-env" \
   --description "Version 1" \
-  --major-version-id "1" \
+  --major-version "1" \
   --source-s3-bucket proton-cli-templates-${account_id} \
   --source-s3-key env-template.tar.gz
 ```
@@ -123,8 +123,8 @@ Wait for the environment template minor version to be successfully registered:
 aws proton-preview wait environment-template-registration-complete \
   --region us-west-2 \
   --template-name "multi-svc-env" \
-  --major-version-id "1" \
-  --minor-version-id "0"
+  --major-version "1" \
+  --minor-version "0"
 ```
 
 You can now publish the environment template minor version, making it available for users in your AWS account to create Proton environments.
@@ -133,8 +133,8 @@ You can now publish the environment template minor version, making it available 
 aws proton-preview update-environment-template-minor-version \
   --region us-west-2 \
   --template-name "multi-svc-env" \
-  --major-version-id "1" \
-  --minor-version-id "0" \
+  --major-version "1" \
+  --minor-version "0" \
   --status "PUBLISHED"
 ```
 
@@ -175,7 +175,7 @@ aws proton-preview create-service-template-minor-version \
   --region us-west-2 \
   --template-name "crud-api-service" \
   --description "Version 1" \
-  --major-version-id "1" \
+  --major-version "1" \
   --source-s3-bucket proton-cli-templates-${account_id} \
   --source-s3-key svc-crud-template.tar.gz
 ```
@@ -186,8 +186,8 @@ Wait for the service template minor version to be successfully registered:
 aws proton-preview wait service-template-registration-complete \
   --region us-west-2 \
   --template-name "crud-api-service" \
-  --major-version-id "1" \
-  --minor-version-id "0"
+  --major-version "1" \
+  --minor-version "0"
 ```
 
 You can now publish the service template minor version, making it available for users in your AWS account to create Proton services.
@@ -196,8 +196,8 @@ You can now publish the service template minor version, making it available for 
 aws proton-preview update-service-template-minor-version \
   --region us-west-2 \
   --template-name "crud-api-service" \
-  --major-version-id "1" \
-  --minor-version-id "0" \
+  --major-version "1" \
+  --minor-version "0" \
   --status "PUBLISHED"
 ```
 
@@ -214,9 +214,9 @@ First, deploy a Proton environment. This command reads your environment spec at 
 ```bash
 aws proton-preview create-environment \
   --region us-west-2 \
-  --environment-name "multi-svc-beta" \
-  --environment-template-arn arn:aws:proton:us-west-2:${account_id}:environment-template/multi-svc-env \
-  --template-major-version-id 1 \
+  --name "multi-svc-beta" \
+  --template-name multi-svc-env \
+  --template-major-version 1 \
   --proton-service-role-arn arn:aws:iam::${account_id}:role/ProtonServiceRole \
   --spec file://specs/env-spec.yaml
 ```
@@ -226,7 +226,7 @@ Wait for the environment to successfully deploy.
 ```bash
 aws proton-preview wait environment-deployment-complete \
   --region us-west-2 \
-  --environment-name "multi-svc-beta"
+  --name "multi-svc-beta"
 ```
 
 Then, create a Proton service and deploy it into your Proton environment.  This command reads your service spec at `specs/svc-spec.yaml`, merges it with the service template created above, and deploys the resources in CloudFormation stacks in your AWS account using the Proton service role.  The service will provision a Lambda-based CRUD API endpoint and a CodePipeline pipeline to deploy your application code.
@@ -236,12 +236,12 @@ Fill in your CodeStar Connections connection ID and your source code repository 
 ```bash
 aws proton-preview create-service \
   --region us-west-2 \
-  --service-name "tasks-front-end" \
+  --name "tasks-front-end" \
   --repository-connection-arn arn:aws:codestar-connections:us-west-2:${account_id}:connection/<your-codestar-connection-id> \
   --repository-id "<your-source-repo-account>/<your-repository-name>" \
   --branch "main" \
-  --template-major-version-id 1 \
-  --service-template-arn arn:aws:proton:us-west-2:${account_id}:service-template/crud-api-service \
+  --template-major-version 1 \
+  --template-name crud-api-service \
   --spec file://specs/svc-spec.yaml
 ```
 
@@ -250,23 +250,6 @@ Wait for the service to successfully deploy.
 ```bash
 aws proton-preview wait service-creation-complete \
   --region us-west-2 \
-  --service-name "tasks-front-end"
-```
-
-Once the service is created, retrieve the CodePipeline pipeline console URL and the CRUD API endpoint URL for your service.
-
-```bash
-aws proton-preview get-service \
-  --region us-west-2 \
-  --service-name "tasks-front-end" \
-  --query "service.pipeline.outputs" \
-  --output text
-
-aws proton-preview get-service-instance \
-  --region us-west-2 \
-  --service-name "tasks-front-end" \
-  --service-instance-name "front-end" \
-  --query "serviceInstance.outputs" \
-  --output text
+  --name "tasks-front-end"
 ```
 
