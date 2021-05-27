@@ -1,6 +1,6 @@
-# AWS Proton Sample CRUD API service Using AWS Lambda
+# AWS Proton Sample Multi Service
 
-This directory contains sample AWS Proton Environment and Service templates for a CRUD API service built on AWS Lambda, as well as sample specs for creating Proton Environments and Services using the templates. The environment template contains a simple Amazon DynamoDB table. The service template contains all the resources required to provision Lambda-backed APIs as well as a continuous delivery pipeline using AWS CodePipeline.
+This directory contains sample AWS Proton Environment and Service templates to showcase how you can leverage AWS Proton Environments to create shared resources across multiple Services. The environment template contains a simple Amazon DynamoDB table and an S3 Bucket. Then there are two service templates. One service template creates a simple CRUD API service backed by Lambdas and an API gateway and includes an AWS Code Pipeline for continuos delivery. The second service template creates a data processing service that consumes data from an API, pushes that data into a kinesis stream which is then subsequently consumed by another Lambda and then pushes that data into a firehose that ends up in the S3 Bucket configured by the environment template, again offering continuous delivery via AWS CodePipeline.
 
 Developers provisioning their services can configure the following properties through their service spec:
 * Lambda memory size
@@ -8,7 +8,10 @@ Developers provisioning their services can configure the following properties th
 * Lambda runtime
 * A resource to construct a CRUD API around.
 
-If you need application code to run in the service, you can find a sample application here: https://github.com/aws-samples/aws-proton-sample-lambda-crud-service
+If you need application code to run in the services:
+
+* For the crud service: https://github.com/aws-samples/aws-proton-sample-lambda-crud-service
+* For the data processing service: https://github.com/aws-samples/aws-proton-sample-lambda-data-processing
 
 # Registering and deploying these templates
 
@@ -18,7 +21,7 @@ You can register and deploy these templates by using the AWS Proton console. To 
 
 First, make sure you have the AWS CLI installed and configured. Run the following command to set an environment variable with your account ID:
 
-```
+```bash
 account_id=`aws sts get-caller-identity|jq -r ".Account"`
 ```
 
@@ -26,7 +29,7 @@ account_id=`aws sts get-caller-identity|jq -r ".Account"`
 
 While AWS Proton is in Preview, you will need to manually configure the AWS CLI. The following commands will add the Proton commands to the AWS CLI.
 
-```
+```bash
 aws s3 cp s3://aws-proton-preview-public-files/model/proton-2020-07-20.normal.json .
 aws s3 cp s3://aws-proton-preview-public-files/model/waiters2.json .
 aws configure add-model --service-model file://proton-2020-07-20.normal.json --service-name proton-preview
@@ -40,7 +43,7 @@ Before you register your templates and deploy your environments and services, yo
 
 Create the S3 bucket to store your templates:
 
-```
+```bash
 aws s3api create-bucket \
   --region us-west-2 \
   --bucket "proton-cli-templates-${account_id}" \
@@ -49,7 +52,7 @@ aws s3api create-bucket \
 
 Create the IAM role that Proton will assume to provision resources and manage AWS CloudFormation stacks in your AWS account.
 
-```
+```bash
 aws iam create-role \
   --role-name ProtonServiceRole \
   --assume-role-policy-document file://./policies/proton-service-assume-policy.json
@@ -61,11 +64,11 @@ aws iam attach-role-policy \
 
 Then, allow Proton to use that role to provision resources for your services' continuous delivery pipelines:
 
-```
+```bash
 aws proton-preview update-account-roles \
   --region us-west-2 \
   --account-role-details "pipelineServiceRoleArn=arn:aws:iam::${account_id}:role/ProtonServiceRole"
- ```
+```
 
 Create an AWS CodeStar Connections connection to your application code stored in a GitHub or Bitbucket source code repository.  This connection allows CodePipeline to pull your application source code before building and deploying the code to your Proton service.  To use sample application code, first create a fork of the sample application repository here:
 https://github.com/aws-samples/aws-proton-sample-lambda-crud-service
@@ -79,26 +82,26 @@ Register the sample environment template, which contains a simple Amazon DynamoD
 
 First, create an environment template, which will contain all of the environment template's major and minor versions.
 
-```
+```bash
 aws proton-preview create-environment-template \
   --region us-west-2 \
-  --template-name "crud-api" \
-  --display-name "CRUD Environment" \
-  --description "Environment with DDB Table"
+  --template-name "multi-svc-env" \
+  --display-name "Multi Service Environment" \
+  --description "Environment with DDB Table & S3 Bucket"
 ```
 
 Then, create a new major version for the `crud-api` environment template.
 
-```
+```bash
 aws proton-preview create-environment-template-major-version \
   --region us-west-2 \
-  --template-name "crud-api" \
+  --template-name "multi-svc-env" \
   --description "Version 1"
 ```
 
 Now create a minor version which contains the contents of the sample environment template. Compress the sample template files and register the minor version:
 
-```
+```bash
 tar -zcvf env-template.tar.gz environment/
 
 aws s3 cp env-template.tar.gz s3://proton-cli-templates-${account_id}/env-template.tar.gz --region us-west-2
@@ -107,7 +110,7 @@ rm env-template.tar.gz
 
 aws proton-preview create-environment-template-minor-version \
   --region us-west-2 \
-  --template-name "crud-api" \
+  --template-name "multi-svc-env" \
   --description "Version 1" \
   --major-version "1" \
   --source-s3-bucket proton-cli-templates-${account_id} \
@@ -116,32 +119,32 @@ aws proton-preview create-environment-template-minor-version \
 
 Wait for the environment template minor version to be successfully registered:
 
-```
+```bash
 aws proton-preview wait environment-template-registration-complete \
   --region us-west-2 \
-  --template-name "crud-api" \
+  --template-name "multi-svc-env" \
   --major-version "1" \
   --minor-version "0"
 ```
 
 You can now publish the environment template minor version, making it available for users in your AWS account to create Proton environments.
 
-```
+```bash
 aws proton-preview update-environment-template-minor-version \
   --region us-west-2 \
-  --template-name "crud-api" \
+  --template-name "multi-svc-env" \
   --major-version "1" \
   --minor-version "0" \
   --status "PUBLISHED"
 ```
 
-## Register A Service Template
+## Register the CRUD Service Template
 
 Register the sample service template, which contains all the resources required to provision Lambda-backed APIs as well as a continuous delivery pipeline using AWS CodePipeline.
 
 First, create the service template.
 
-```
+```bash
 aws proton-preview create-service-template \
   --region us-west-2 \
   --template-name "crud-api-service" \
@@ -151,7 +154,7 @@ aws proton-preview create-service-template \
 
 Then, create a major version for the `http-api-service` service template and associate it with the `crud-api` environment template created above.
 
-```
+```bash
 aws proton-preview create-service-template-major-version \
   --region us-west-2 \
   --template-name "crud-api-service" \
@@ -161,10 +164,10 @@ aws proton-preview create-service-template-major-version \
 
 Now create a minor version which contains the contents of the sample service template. Compress the sample template files and register the minor version:
 
-```
-tar -zcvf svc-template.tar.gz service/
+```bash
+tar -zcvf svc-crud-template.tar.gz service-crud/
 
-aws s3 cp svc-template.tar.gz s3://proton-cli-templates-${account_id}/svc-template.tar.gz --region us-west-2
+aws s3 cp svc-crud-template.tar.gz s3://proton-cli-templates-${account_id}/svc-crud-template.tar.gz --region us-west-2
 
 rm svc-template.tar.gz
 
@@ -174,12 +177,12 @@ aws proton-preview create-service-template-minor-version \
   --description "Version 1" \
   --major-version "1" \
   --source-s3-bucket proton-cli-templates-${account_id} \
-  --source-s3-key svc-template.tar.gz
+  --source-s3-key svc-crud-template.tar.gz
 ```
 
 Wait for the service template minor version to be successfully registered:
 
-```
+```bash
 aws proton-preview wait service-template-registration-complete \
   --region us-west-2 \
   --template-name "crud-api-service" \
@@ -189,7 +192,7 @@ aws proton-preview wait service-template-registration-complete \
 
 You can now publish the service template minor version, making it available for users in your AWS account to create Proton services.
 
-```
+```bash
 aws proton-preview update-service-template-minor-version \
   --region us-west-2 \
   --template-name "crud-api-service" \
@@ -198,17 +201,21 @@ aws proton-preview update-service-template-minor-version \
   --status "PUBLISHED"
 ```
 
+## Register the Data Processing Service Template
+
+Repeat all of the steps above but change template-name to `data-processing-service` (or whatever you want to call it) and create a tar by running `tar -zcvf svc-data-processing-template.tar.gz service-data-processing/`.
+
 ## Deploy An Environment and Service
 
 With the registered and published environment and service templates, you can now instantiate a Proton environment and service from the templates.
 
 First, deploy a Proton environment. This command reads your environment spec at `specs/env-spec.yaml`, merges it with the environment template created above, and deploys the resources in a CloudFormation stack in your AWS account using the Proton service role.
 
-```
+```bash
 aws proton-preview create-environment \
   --region us-west-2 \
-  --name "crud-api-beta" \
-  --template-name crud-api \
+  --name "multi-svc-beta" \
+  --template-name multi-svc-env \
   --template-major-version 1 \
   --proton-service-role-arn arn:aws:iam::${account_id}:role/ProtonServiceRole \
   --spec file://specs/env-spec.yaml
@@ -216,17 +223,17 @@ aws proton-preview create-environment \
 
 Wait for the environment to successfully deploy.
 
-```
+```bash
 aws proton-preview wait environment-deployment-complete \
   --region us-west-2 \
-  --name "crud-api-beta"
+  --name "multi-svc-beta"
 ```
 
 Then, create a Proton service and deploy it into your Proton environment.  This command reads your service spec at `specs/svc-spec.yaml`, merges it with the service template created above, and deploys the resources in CloudFormation stacks in your AWS account using the Proton service role.  The service will provision a Lambda-based CRUD API endpoint and a CodePipeline pipeline to deploy your application code.
 
 Fill in your CodeStar Connections connection ID and your source code repository details in this command.
 
-```
+```bash
 aws proton-preview create-service \
   --region us-west-2 \
   --name "tasks-front-end" \
@@ -240,8 +247,9 @@ aws proton-preview create-service \
 
 Wait for the service to successfully deploy.
 
-```
+```bash
 aws proton-preview wait service-creation-complete \
   --region us-west-2 \
   --name "tasks-front-end"
 ```
+
