@@ -2,8 +2,8 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Deploy a backend service on AWS Fargate, hosted in a private subnet, and accessible via Service Discovery.
 Mappings:
   EnvironmentNameConfig:
-    Environment: 
-      Name: '{{ environment.environment_name_tag}}'
+    Environment:
+      Name: '{{ environment.name}}'
   TaskSize:
     x-small:
       cpu: 256
@@ -36,28 +36,28 @@ Resources:
       HealthCheckCustomConfig:
         FailureThreshold: 1
       Name: '{{service_instance.service_discovery_name}}'
-      NamespaceId: '{{environment.PrivateNamespace}}'
+      NamespaceId: '{{environment.outputs.PrivateNamespace}}'
   # A log group for storing the stdout logs from this service's containers
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: '{{service_name}}/{{service_instance_name}}'
+      LogGroupName: '{{service.name}}/{{service_instance.name}}'
 
   # The task definition. This is a simple metadata description of what
   # container to run, and what resource requirements it has.
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: '{{service_name}}_{{service_instance_name}}'
+      Family: '{{service.name}}_{{service_instance.name}}'
       Cpu: !FindInMap [TaskSize, {{service_instance.task_size}}, cpu]
       Memory: !FindInMap [TaskSize, {{service_instance.task_size}}, memory]
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
-      ExecutionRoleArn: '{{environment.ECSTaskExecutionRole}}'
+      ExecutionRoleArn: '{{environment.outputs.ECSTaskExecutionRole}}'
       TaskRoleArn: !Ref "AWS::NoValue"
       ContainerDefinitions:
-        - Name: '{{service_instance_name}}'
+        - Name: '{{service_instance.name}}'
           Cpu: !FindInMap [TaskSize, {{service_instance.task_size}}, cpu]
           Memory: !FindInMap [TaskSize, {{service_instance.task_size}}, memory]
           Image: '{{service_instance.image}}'
@@ -66,11 +66,11 @@ Resources:
           LogConfiguration:
             LogDriver: 'awslogs'
             Options:
-              awslogs-group: '{{service_name}}/{{service_instance_name}}'
+              awslogs-group: '{{service.name}}/{{service_instance.name}}'
               awslogs-region: !Ref 'AWS::Region'
-              awslogs-stream-prefix: '{{service_name}}/{{service_instance_name}}'
-      Tags: 
-        - Key: Name 
+              awslogs-stream-prefix: '{{service.name}}/{{service_instance.name}}'
+      Tags:
+        - Key: Name
           Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
 
   # The service_instance. The service is a resource which allows you to run multiple
@@ -79,24 +79,24 @@ Resources:
   Service:
     Type: AWS::ECS::Service
     Properties:
-      ServiceName: '{{service_name}}_{{service_instance_name}}'
-      Cluster: '{{environment.ClusterName}}'
+      ServiceName: '{{service.name}}_{{service_instance.name}}'
+      Cluster: '{{environment.outputs.ClusterName}}'
       LaunchType: FARGATE
       DesiredCount: '{{service_instance.desired_count}}'
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: DISABLED
           SecurityGroups:
-            - '{{environment.ContainerSecurityGroup}}'
+            - '{{environment.outputs.ContainerSecurityGroup}}'
           Subnets:
-            - '{{environment.PrivateSubnetOne}}'
-            - '{{environment.PrivateSubnetTwo}}'
+            - '{{environment.outputs.PrivateSubnetOne}}'
+            - '{{environment.outputs.PrivateSubnetTwo}}'
       TaskDefinition: !Ref 'TaskDefinition'
       ServiceRegistries:
       - RegistryArn: !GetAtt DiscoveryService.Arn
         Port: 8080
-      Tags: 
-        - Key: Name 
+      Tags:
+        - Key: Name
           Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
 
 Outputs:

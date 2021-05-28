@@ -1,6 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Deploy a service on AWS Fargate, hosted in a public subnet, and accessible via a public load balancer.
 Mappings:
+  EnvironmentNameConfig:
+    Environment:
+      Name: '{{ environment.name}}'
   TaskSize:
     x-small:
       cpu: 256
@@ -18,53 +21,73 @@ Mappings:
       cpu: 4096
       memory: 8192
 Resources:
+  # Register service in ServiceDiscovery Service
+  DiscoveryService:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Description: Discovery Service for the Demo Application
+      DnsConfig:
+        RoutingPolicy: MULTIVALUE
+        DnsRecords:
+          - TTL: 60
+            Type: A
+          - TTL: 60
+            Type: SRV
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+      Name: '{{service_instance.inputs.service_discovery_name}}'
+      NamespaceId: '{{environment.PrivateNamespace}}'
+
   # A log group for storing the stdout logs from this service's containers
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: '{{service_name}}/{{service_instance_name}}'
+      LogGroupName: '{{service.name}}/{{service_instance.name}}'
 
   # The task definition. This is a simple metadata description of what
   # container to run, and what resource requirements it has.
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: '{{service_name}}_{{service_instance_name}}'
-      Cpu: !FindInMap [TaskSize, {{service_instance.task_size}}, cpu]
-      Memory: !FindInMap [TaskSize, {{service_instance.task_size}}, memory]
+      Family: '{{service.name}}_{{service_instance.name}}'
+      Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
+      Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
       ExecutionRoleArn: '{{environment.ECSTaskExecutionRole}}'
       TaskRoleArn: !Ref "AWS::NoValue"
       ContainerDefinitions:
-        - Name: '{{service_instance_name}}'
-          Cpu: !FindInMap [TaskSize, {{service_instance.task_size}}, cpu]
-          Memory: !FindInMap [TaskSize, {{service_instance.task_size}}, memory]
-          Image: '{{service_instance.image}}'
+        - Name: '{{service_instance.name}}'
+          Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
+          Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
+          Image: '{{service_instance.inputs.image}}'
           PortMappings:
-            - ContainerPort: '{{service_instance.port}}'
+            - ContainerPort: '{{service_instance.inputs.port}}'
           LogConfiguration:
             LogDriver: 'awslogs'
             Options:
-              awslogs-group: '{{service_name}}/{{service_instance_name}}'
+              awslogs-group: '{{service.name}}/{{service_instance.name}}'
               awslogs-region: !Ref 'AWS::Region'
-              awslogs-stream-prefix: '{{service_name}}/{{service_instance_name}}'
+              awslogs-stream-prefix: '{{service.name}}/{{service_instance.name}}'
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
 
-  # The service_instance. The service is a resource which allows you to run multiple
+  # The service_instance.inputs. The service is a resource which allows you to run multiple
   # copies of a type of task, and gather up their logs and metrics, as well
   # as monitor the number of running tasks and replace any that have crashed
   Service:
     Type: AWS::ECS::Service
     DependsOn: LoadBalancerRule
     Properties:
-      ServiceName: '{{service_name}}_{{service_instance_name}}'
+      ServiceName: '{{service.name}}_{{service_instance.name}}'
       Cluster: '{{environment.ClusterName}}'
       LaunchType: FARGATE
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 75
-      DesiredCount: '{{service_instance.desired_count}}'
+      DesiredCount: '{{service_instance.inputs.desired_count}}'
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
@@ -74,10 +97,16 @@ Resources:
             - '{{environment.PublicSubnetOne}}'
             - '{{environment.PublicSubnetTwo}}'
       TaskDefinition: !Ref 'TaskDefinition'
+      ServiceRegistries:
+      - RegistryArn: !GetAtt DiscoveryService.Arn
+        Port: 80
       LoadBalancers:
-        - ContainerName: '{{service_instance_name}}'
-          ContainerPort: '{{service_instance.port}}'
+        - ContainerName: '{{service_instance.name}}'
+          ContainerPort: '{{service_instance.inputs.port}}'
           TargetGroupArn: !Ref 'TargetGroup'
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
 
   # A target group. This is used for keeping track of all the tasks, and
   # what IP addresses / port numbers they have. You can query it yourself,
@@ -94,14 +123,17 @@ Resources:
       HealthyThresholdCount: 2
       TargetType: ip
       # Note that the Name property has a 32 character limit, which could be
-      # reached by using either {{service_name}}, {{service_instance_name}}
+      # reached by using either {{service.name}}, {{service_instance.name}}
       # or a combination of both as we're doing here, so we truncate the name to 29 characters
       # plus an ellipsis different from '...' or '---' to avoid running into errors.
-      Name: '{{(service_name~"--"~service_instance_name)|truncate(29, true, 'zzz')}}'      
-      Port: '{{service_instance.port}}'
+      Name: '{{(service_name~"--"~service_instance_name)|truncate(29, true, 'zzz')}}'
+      Port: '{{service_instance.inputs.port}}'
       Protocol: HTTP
       UnhealthyThresholdCount: 2
       VpcId: '{{environment.VpcId}}'
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
 
   # Create a rule on the load balancer for routing traffic to the target group
   LoadBalancerRule:
@@ -129,7 +161,7 @@ Resources:
           - '/'
           - - service
             - '{{environment.ClusterName}}'
-            - '{{service_name}}_{{service_instance_name}}'
+            - '{{service.name}}_{{service_instance.name}}'
       MinCapacity: 1
       MaxCapacity: 10
       RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
@@ -143,7 +175,7 @@ Resources:
         Fn::Join:
           - '/'
           - - scale
-            - '{{service_name}}_{{service_instance_name}}'
+            - '{{service.name}}_{{service_instance.name}}'
             - down
       PolicyType: StepScaling
       ResourceId:
@@ -151,7 +183,7 @@ Resources:
           - '/'
           - - service
             - '{{environment.ClusterName}}'
-            - '{{service_name}}_{{service_instance_name}}'
+            - '{{service.name}}_{{service_instance.name}}'
       ScalableDimension: 'ecs:service:DesiredCount'
       ServiceNamespace: 'ecs'
       StepScalingPolicyConfiguration:
@@ -170,7 +202,7 @@ Resources:
         Fn::Join:
           - '/'
           - - scale
-            - '{{service_name}}_{{service_instance_name}}'
+            - '{{service.name}}_{{service_instance.name}}'
             - up
       PolicyType: StepScaling
       ResourceId:
@@ -178,7 +210,7 @@ Resources:
           - '/'
           - - service
             - '{{environment.ClusterName}}'
-            - '{{service_name}}_{{service_instance_name}}'
+            - '{{service.name}}_{{service_instance.name}}'
       ScalableDimension: 'ecs:service:DesiredCount'
       ServiceNamespace: 'ecs'
       StepScalingPolicyConfiguration:
@@ -203,17 +235,17 @@ Resources:
         Fn::Join:
           - '-'
           - - low-cpu
-            - '{{service_name}}_{{service_instance_name}}'
+            - '{{service.name}}_{{service_instance.name}}'
       AlarmDescription:
         Fn::Join:
           - ' '
           - - "Low CPU utilization for service"
-            - '{{service_name}}_{{service_instance_name}}'
+            - '{{service.name}}_{{service_instance.name}}'
       MetricName: CPUUtilization
       Namespace: AWS/ECS
       Dimensions:
         - Name: ServiceName
-          Value: '{{service_name}}_{{service_instance_name}}'
+          Value: '{{service.name}}_{{service_instance.name}}'
         - Name: ClusterName
           Value:
             '{{environment.ClusterName}}'
@@ -232,17 +264,17 @@ Resources:
         Fn::Join:
           - '-'
           - - high-cpu
-            - '{{service_name}}_{{service_instance_name}}'
+            - '{{service.name}}_{{service_instance.name}}'
       AlarmDescription:
         Fn::Join:
           - ' '
           - - "High CPU utilization for service"
-            - '{{service_name}}_{{service_instance_name}}'
+            - '{{service.name}}_{{service_instance.name}}'
       MetricName: CPUUtilization
       Namespace: AWS/ECS
       Dimensions:
         - Name: ServiceName
-          Value: '{{service_name}}_{{service_instance_name}}'
+          Value: '{{service.name}}_{{service_instance.name}}'
         - Name: ClusterName
           Value:
             '{{environment.ClusterName}}'
@@ -275,6 +307,9 @@ Resources:
           # Allow access to ALB from anywhere on the internet
           - CidrIp: 0.0.0.0/0
             IpProtocol: -1
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
 
   PublicLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -289,6 +324,9 @@ Resources:
         - '{{environment.PublicSubnetOne}}'
         - '{{environment.PublicSubnetTwo}}'
       SecurityGroups: [!Ref 'PublicLoadBalancerSG']
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
 
   PublicLoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -301,7 +339,11 @@ Resources:
       LoadBalancerArn: !Ref 'PublicLoadBalancer'
       Port: 80
       Protocol: HTTP
+
 Outputs:
   ServiceEndpoint:
     Description: The URL to access the service
     Value: !Sub "http://${PublicLoadBalancer.DNSName}"
+  ServiceDiscovery:
+    Description: The registered service discovery Service Id
+    Value: !Ref DiscoveryService

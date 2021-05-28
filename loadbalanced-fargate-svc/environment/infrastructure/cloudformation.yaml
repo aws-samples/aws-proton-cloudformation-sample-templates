@@ -5,11 +5,11 @@ Mappings:
   # The VPC and subnet configuration is passed in via the environment spec.
   SubnetConfig:
     VPC:
-      CIDR: '{{ environment.vpc_cidr}}'
+      CIDR: '{{ environment.inputs.vpc_cidr}}'
     PublicOne:
-      CIDR: '{{ environment.subnet_one_cidr}}'
+      CIDR: '{{ environment.inputs.subnet_one_cidr}}'
     PublicTwo:
-      CIDR: '{{ environment.subnet_two_cidr}}'
+      CIDR: '{{ environment.inputs.subnet_two_cidr}}'
 Resources:
   VPC:
     Type: AWS::EC2::VPC

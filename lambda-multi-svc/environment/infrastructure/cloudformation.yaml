@@ -24,11 +24,11 @@ Resources:
             - AttributeName: hk
               KeyType: RANGE
           Projection:
-            ProjectionType: ALL {% if environment.ttl_attribute|length %}
+            ProjectionType: ALL {% if environment.inputs.ttl_attribute|length %}
       TimeToLiveSpecification:
-        AttributeName: "{{ environment.ttl_attribute }}"
+        AttributeName: "{{ environment.inputs.ttl_attribute }}"
         Enabled: true
-{% endif %}  
+{% endif %}
   AppBucket:
     Type: AWS::S3::Bucket
 # These output values will be available to service templates to use.
