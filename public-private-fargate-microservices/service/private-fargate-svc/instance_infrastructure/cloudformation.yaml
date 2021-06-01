@@ -35,7 +35,7 @@ Resources:
             Type: SRV
       HealthCheckCustomConfig:
         FailureThreshold: 1
-      Name: '{{service_instance.service_discovery_name}}'
+      Name: '{{service_instance.inputs.service_discovery_name}}'
       NamespaceId: '{{environment.outputs.PrivateNamespace}}'
   # A log group for storing the stdout logs from this service's containers
   LogGroup:
@@ -49,8 +49,8 @@ Resources:
     Type: AWS::ECS::TaskDefinition
     Properties:
       Family: '{{service.name}}_{{service_instance.name}}'
-      Cpu: !FindInMap [TaskSize, {{service_instance.task_size}}, cpu]
-      Memory: !FindInMap [TaskSize, {{service_instance.task_size}}, memory]
+      Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
+      Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
@@ -58,11 +58,11 @@ Resources:
       TaskRoleArn: !Ref "AWS::NoValue"
       ContainerDefinitions:
         - Name: '{{service_instance.name}}'
-          Cpu: !FindInMap [TaskSize, {{service_instance.task_size}}, cpu]
-          Memory: !FindInMap [TaskSize, {{service_instance.task_size}}, memory]
-          Image: '{{service_instance.image}}'
+          Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
+          Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
+          Image: '{{service_instance.inputs.image}}'
           PortMappings:
-            - ContainerPort: '{{service_instance.port}}'
+            - ContainerPort: '{{service_instance.inputs.port}}'
           LogConfiguration:
             LogDriver: 'awslogs'
             Options:
@@ -73,7 +73,7 @@ Resources:
         - Key: Name
           Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
 
-  # The service_instance. The service is a resource which allows you to run multiple
+  # The service_instance.inputs. The service is a resource which allows you to run multiple
   # copies of a type of task, and gather up their logs and metrics, as well
   # as monitor the number of running tasks and replace any that have crashed
   Service:
@@ -82,7 +82,7 @@ Resources:
       ServiceName: '{{service.name}}_{{service_instance.name}}'
       Cluster: '{{environment.outputs.ClusterName}}'
       LaunchType: FARGATE
-      DesiredCount: '{{service_instance.desired_count}}'
+      DesiredCount: '{{service_instance.inputs.desired_count}}'
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: DISABLED

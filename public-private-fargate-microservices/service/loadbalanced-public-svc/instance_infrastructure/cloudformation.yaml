@@ -3,7 +3,7 @@ Description: Deploy a service on AWS Fargate, hosted in a public subnet, and acc
 Mappings:
   EnvironmentNameConfig:
     Environment:
-      Name: '{{ environment.name}}'
+      Name: '{{environment.name}}'
   TaskSize:
     x-small:
       cpu: 256
@@ -36,7 +36,7 @@ Resources:
       HealthCheckCustomConfig:
         FailureThreshold: 1
       Name: '{{service_instance.inputs.service_discovery_name}}'
-      NamespaceId: '{{environment.PrivateNamespace}}'
+      NamespaceId: '{{environment.outputs.PrivateNamespace}}'
 
   # A log group for storing the stdout logs from this service's containers
   LogGroup:
@@ -55,7 +55,7 @@ Resources:
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
-      ExecutionRoleArn: '{{environment.ECSTaskExecutionRole}}'
+      ExecutionRoleArn: '{{environment.outputs.ECSTaskExecutionRole}}'
       TaskRoleArn: !Ref "AWS::NoValue"
       ContainerDefinitions:
         - Name: '{{service_instance.name}}'
@@ -82,7 +82,7 @@ Resources:
     DependsOn: LoadBalancerRule
     Properties:
       ServiceName: '{{service.name}}_{{service_instance.name}}'
-      Cluster: '{{environment.ClusterName}}'
+      Cluster: '{{environment.outputs.ClusterName}}'
       LaunchType: FARGATE
       DeploymentConfiguration:
         MaximumPercent: 200
@@ -92,10 +92,10 @@ Resources:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
           SecurityGroups:
-            - '{{environment.ContainerSecurityGroup}}'
+            - '{{environment.outputs.ContainerSecurityGroup}}'
           Subnets:
-            - '{{environment.PublicSubnetOne}}'
-            - '{{environment.PublicSubnetTwo}}'
+            - '{{environment.outputs.PublicSubnetOne}}'
+            - '{{environment.outputs.PublicSubnetTwo}}'
       TaskDefinition: !Ref 'TaskDefinition'
       ServiceRegistries:
       - RegistryArn: !GetAtt DiscoveryService.Arn
@@ -130,7 +130,7 @@ Resources:
       Port: '{{service_instance.inputs.port}}'
       Protocol: HTTP
       UnhealthyThresholdCount: 2
-      VpcId: '{{environment.VpcId}}'
+      VpcId: '{{environment.outputs.VpcId}}'
       Tags:
         - Key: Name
           Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
@@ -160,7 +160,7 @@ Resources:
         Fn::Join:
           - '/'
           - - service
-            - '{{environment.ClusterName}}'
+            - '{{environment.outputs.ClusterName}}'
             - '{{service.name}}_{{service_instance.name}}'
       MinCapacity: 1
       MaxCapacity: 10
@@ -182,7 +182,7 @@ Resources:
         Fn::Join:
           - '/'
           - - service
-            - '{{environment.ClusterName}}'
+            - '{{environment.outputs.ClusterName}}'
             - '{{service.name}}_{{service_instance.name}}'
       ScalableDimension: 'ecs:service:DesiredCount'
       ServiceNamespace: 'ecs'
@@ -209,7 +209,7 @@ Resources:
         Fn::Join:
           - '/'
           - - service
-            - '{{environment.ClusterName}}'
+            - '{{environment.outputs.ClusterName}}'
             - '{{service.name}}_{{service_instance.name}}'
       ScalableDimension: 'ecs:service:DesiredCount'
       ServiceNamespace: 'ecs'
@@ -248,7 +248,7 @@ Resources:
           Value: '{{service.name}}_{{service_instance.name}}'
         - Name: ClusterName
           Value:
-            '{{environment.ClusterName}}'
+            '{{environment.outputs.ClusterName}}'
       Statistic: Average
       Period: 60
       EvaluationPeriods: 1
@@ -277,7 +277,7 @@ Resources:
           Value: '{{service.name}}_{{service_instance.name}}'
         - Name: ClusterName
           Value:
-            '{{environment.ClusterName}}'
+            '{{environment.outputs.ClusterName}}'
       Statistic: Average
       Period: 60
       EvaluationPeriods: 1
@@ -290,7 +290,7 @@ Resources:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       Description: Ingress from the public ALB
-      GroupId: '{{environment.ContainerSecurityGroup}}'
+      GroupId: '{{environment.outputs.ContainerSecurityGroup}}'
       IpProtocol: -1
       SourceSecurityGroupId: !Ref 'PublicLoadBalancerSG'
 
@@ -302,7 +302,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Access to the public facing load balancer
-      VpcId: '{{environment.VpcId}}'
+      VpcId: '{{environment.outputs.VpcId}}'
       SecurityGroupIngress:
           # Allow access to ALB from anywhere on the internet
           - CidrIp: 0.0.0.0/0
@@ -321,8 +321,8 @@ Resources:
       Subnets:
         # The load balancer is placed into the public subnets, so that traffic
         # from the internet can reach the load balancer directly via the internet gateway
-        - '{{environment.PublicSubnetOne}}'
-        - '{{environment.PublicSubnetTwo}}'
+        - '{{environment.outputs.PublicSubnetOne}}'
+        - '{{environment.outputs.PublicSubnetTwo}}'
       SecurityGroups: [!Ref 'PublicLoadBalancerSG']
       Tags:
         - Key: Name

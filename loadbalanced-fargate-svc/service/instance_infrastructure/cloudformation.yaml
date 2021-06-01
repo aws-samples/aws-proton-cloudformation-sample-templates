@@ -30,8 +30,8 @@ Resources:
     Type: AWS::ECS::TaskDefinition
     Properties:
       Family: '{{service.name}}_{{service_instance.name}}'
-      Cpu: !FindInMap [TaskSize, {{service_instance.task_size}}, cpu]
-      Memory: !FindInMap [TaskSize, {{service_instance.task_size}}, memory]
+      Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
+      Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
@@ -39,11 +39,11 @@ Resources:
       TaskRoleArn: !Ref "AWS::NoValue"
       ContainerDefinitions:
         - Name: '{{service_instance.name}}'
-          Cpu: !FindInMap [TaskSize, {{service_instance.task_size}}, cpu]
-          Memory: !FindInMap [TaskSize, {{service_instance.task_size}}, memory]
-          Image: '{{service_instance.image}}'
+          Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
+          Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
+          Image: '{{service_instance.inputs.image}}'
           PortMappings:
-            - ContainerPort: '{{service_instance.port}}'
+            - ContainerPort: '{{service_instance.inputs.port}}'
           LogConfiguration:
             LogDriver: 'awslogs'
             Options:
@@ -51,7 +51,7 @@ Resources:
               awslogs-region: !Ref 'AWS::Region'
               awslogs-stream-prefix: '{{service.name}}/{{service_instance.name}}'
 
-  # The service_instance. The service is a resource which allows you to run multiple
+  # The service_instance.inputs. The service is a resource which allows you to run multiple
   # copies of a type of task, and gather up their logs and metrics, as well
   # as monitor the number of running tasks and replace any that have crashed
   Service:
@@ -64,7 +64,7 @@ Resources:
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 75
-      DesiredCount: '{{service_instance.desired_count}}'
+      DesiredCount: '{{service_instance.inputs.desired_count}}'
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
@@ -76,7 +76,7 @@ Resources:
       TaskDefinition: !Ref 'TaskDefinition'
       LoadBalancers:
         - ContainerName: '{{service_instance.name}}'
-          ContainerPort: '{{service_instance.port}}'
+          ContainerPort: '{{service_instance.inputs.port}}'
           TargetGroupArn: !Ref 'TargetGroup'
 
   # A target group. This is used for keeping track of all the tasks, and
@@ -97,8 +97,8 @@ Resources:
       # reached by using either {{service.name}}, {{service_instance.name}}
       # or a combination of both as we're doing here, so we truncate the name to 29 characters
       # plus an ellipsis different from '...' or '---' to avoid running into errors.
-      Name: '{{(service_name~"--"~service_instance_name)|truncate(29, true, 'zzz')}}'
-      Port: '{{service_instance.port}}'
+      Name: '{{(service,name~"--"~service_instance.name)|truncate(29, true, 'zzz')}}'
+      Port: '{{service_instance.inputs.port}}'
       Protocol: HTTP
       UnhealthyThresholdCount: 2
       VpcId: '{{environment.outputs.VpcId}}'
