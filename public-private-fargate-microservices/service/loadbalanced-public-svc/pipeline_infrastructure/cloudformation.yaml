@@ -18,7 +18,7 @@ Resources:
           Value: !Ref ECRRepo
         - Name: service_name
           Type: PLAINTEXT
-          Value: '{{service_name}}'
+          Value: '{{service.name}}'
       ServiceRole:
         Fn::GetAtt:
           - PublishRole
@@ -99,7 +99,7 @@ Resources:
         EnvironmentVariables:
         - Name: service_name
           Type: PLAINTEXT
-          Value:  '{{service_name}}'
+          Value:  '{{service.name}}'
         - Name: service_instance_name
           Type: PLAINTEXT
           Value: '{{service_instance.name}}'
@@ -481,7 +481,7 @@ Resources:
   PipelineArtifactsBucketEncryptionKeyAlias:
     Type: AWS::KMS::Alias
     Properties:
-      AliasName: 'alias/codepipeline-encryption-key-{{ service_name }}'
+      AliasName: 'alias/codepipeline-encryption-key-{{ service.name }}'
       TargetKeyId:
         Fn::GetAtt:
           - PipelineArtifactsBucketEncryptionKey
@@ -566,9 +566,9 @@ Resources:
                 Provider: CodeStarSourceConnection
                 Version: "1"
               Configuration:
-                ConnectionArn: '{{ source.connection_arn }}'
-                FullRepositoryId: '{{ source.repository }}'
-                BranchName: '{{ source.branch }}'
+                ConnectionArn: '{{ service.repository_connection_arn }}'
+                FullRepositoryId: '{{ service.repository_id }}'
+                BranchName: '{{ service.branch_name }}'
               Name: Checkout
               OutputArtifacts:
                 - Name: Artifact_Source_Checkout

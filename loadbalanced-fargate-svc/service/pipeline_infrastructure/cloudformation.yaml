@@ -1,6 +1,6 @@
 Resources:
-  FunctionBucket:
-    Type: AWS::S3::Bucket
+  ECRRepo:
+    Type: AWS::ECR::Repository
     DeletionPolicy: Retain
   BuildProject:
     Type: AWS::CodeBuild::Project
@@ -13,30 +13,28 @@ Resources:
         PrivilegedMode: true
         Type: LINUX_CONTAINER
         EnvironmentVariables:
-        - Name: bucket_name
+        - Name: repo_name
           Type: PLAINTEXT
-          Value: !Ref FunctionBucket
+          Value: !Ref ECRRepo
         - Name: service_name
           Type: PLAINTEXT
-          Value: '{{service_name}}'
+          Value: '{{service.name}}'
       ServiceRole:
         Fn::GetAtt:
           - PublishRole
           - Arn
       Source:
-        BuildSpec: >-
+        BuildSpec:
+          Fn::Join:
+            - ""
+            - - >-
                 {
                   "version": "0.2",
                   "phases": {
                     "install": {
-                      "runtime-versions": {{
-                          {"ruby2.7": {"ruby": "2.7"},
-                            "go1.x": {"golang": "1.x"},
-                            "nodejs12.x": {"nodejs": "12.x"},
-                            "python3.8": {"python": "3.8"},
-                            "java11": {"java": "openjdk11.x"},
-                            "dotnetcore3.1": {"dotnet": "3.1"}
-                          }[service_instances[0].spec.lambda_runtime] | tojson | safe }},
+                      "runtime-versions": {
+                        "docker": 18
+                      },
                       "commands": [
                         "aws s3 cp s3://aws-proton-preview-public-files/model/proton-2020-07-20.normal.json .",
                         "aws s3 cp s3://aws-proton-preview-public-files/model/waiters2.json .",
@@ -52,20 +50,27 @@ Resources:
                     "pre_build": {
                       "commands": [
                         "cd $CODEBUILD_SRC_DIR",
-                        "{{ pipeline.unit_test_command }}"
+                        "$(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)",
+                        "{{ pipeline.unit_test_command }}",
                       ]
                     },
                     "build": {
                       "commands": [
-                        "{{ pipeline.packaging_command }}",
-                        "FUNCTION_URI=s3://$bucket_name/$CODEBUILD_BUILD_NUMBER/function.zip",
-                        "aws s3 cp function.zip $FUNCTION_URI"
+                        "IMAGE_REPO_NAME=$repo_name",
+                        "IMAGE_TAG=$CODEBUILD_BUILD_NUMBER",
+                        "IMAGE_ID=
+              - Ref: AWS::AccountId
+              - >-
+                .dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG",
+                        "docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG -f {{ pipeline.dockerfile }} .",
+                        "docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $IMAGE_ID;",
+                        "docker push $IMAGE_ID"
                       ]
                     },
                     "post_build": {
                       "commands": [
-                        "aws proton-preview --endpoint-url https://proton.$AWS_DEFAULT_REGION.amazonaws.com --region $AWS_DEFAULT_REGION get-service --name $service_name | jq -r .service.spec > service.yaml",
-                        "yq w service.yaml 'instances[*].spec.code_uri' \"$FUNCTION_URI\" > rendered_service.yaml"
+                        "aws proton-preview --endpoint-url https://proton.$AWS_DEFAULT_REGION.amazonaws.com --region $AWS_DEFAULT_REGION get-service --name-name $service_name | jq -r .service.spec > service.yaml",
+                        "yq w service.yaml 'instances[*].spec.image' \"$IMAGE_ID\" > rendered_service.yaml"
                       ]
                     }
                   },
@@ -94,7 +99,7 @@ Resources:
         EnvironmentVariables:
         - Name: service_name
           Type: PLAINTEXT
-          Value:  '{{service_name}}'
+          Value:  '{{service.name}}'
         - Name: service_instance_name
           Type: PLAINTEXT
           Value: '{{service_instance.name}}'
@@ -129,7 +134,7 @@ Resources:
           - PipelineArtifactsBucketEncryptionKey
           - Arn
 {% endfor %}
-  # This role is used to build and publish the lambda function to S3
+  # This role is used to build and publish an image to ECR
   PublishRole:
     Type: AWS::IAM::Role
     Properties:
@@ -191,6 +196,22 @@ Resources:
                   - Ref: BuildProject
                   - -*
           - Action:
+              - ecr:GetAuthorizationToken
+            Effect: Allow
+            Resource: "*"
+          - Action:
+              - ecr:BatchCheckLayerAvailability
+              - ecr:CompleteLayerUpload
+              - ecr:GetAuthorizationToken
+              - ecr:InitiateLayerUpload
+              - ecr:PutImage
+              - ecr:UploadLayerPart
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+                - ECRRepo
+                - Arn
+          - Action:
               - proton:GetService
             Effect: Allow
             Resource: "*"
@@ -198,25 +219,6 @@ Resources:
             Effect: Allow
             Resource:
               - "arn:aws:s3:::aws-proton-preview-public-files/*"
-          - Action:
-              - s3:GetObject*
-              - s3:GetBucket*
-              - s3:List*
-              - s3:DeleteObject*
-              - s3:PutObject*
-              - s3:Abort*
-              - s3:CreateMultipartUpload
-            Effect: Allow
-            Resource:
-              - Fn::GetAtt:
-                  - FunctionBucket
-                  - Arn
-              - Fn::Join:
-                  - ""
-                  - - Fn::GetAtt:
-                        - FunctionBucket
-                        - Arn
-                    - /*
           - Action:
               - s3:GetObject*
               - s3:GetBucket*
@@ -479,7 +481,7 @@ Resources:
   PipelineArtifactsBucketEncryptionKeyAlias:
     Type: AWS::KMS::Alias
     Properties:
-      AliasName: 'alias/codepipeline-encryption-key-{{ service_name }}'
+      AliasName: 'alias/codepipeline-encryption-key-{{ service.name }}'
       TargetKeyId:
         Fn::GetAtt:
           - PipelineArtifactsBucketEncryptionKey
@@ -564,9 +566,9 @@ Resources:
                 Provider: CodeStarSourceConnection
                 Version: "1"
               Configuration:
-                ConnectionArn: '{{ source.connection_arn }}'
-                FullRepositoryId: '{{ source.repository }}'
-                BranchName: '{{ source.branch }}'
+                ConnectionArn: '{{ service.repository_connection_arn }}'
+                FullRepositoryId: '{{ service.repository_id }}'
+                BranchName: '{{ service.branch_name }}'
               Name: Checkout
               OutputArtifacts:
                 - Name: Artifact_Source_Checkout

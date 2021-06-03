@@ -4,22 +4,22 @@ Description: Simple Lambda based HTTP service template
 
 Globals:
   Function:
-    Timeout: {{service_instance.lambda_timeout}}
+    Timeout: {{service_instance.inputs.lambda_timeout}}
     Tracing: Active
-    MemorySize: {{service_instance.lambda_memory}}
+    MemorySize: {{service_instance.inputs.lambda_memory}}
 
 Resources:
   CallbackHttpApi:
     Type: AWS::Serverless::HttpApi
     Properties:
       FailOnWarnings: false
-{% if service_instance.code_uri|length %}
+{% if service_instance.inputs.code_uri|length %}
   CallbackFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: "{{service_instance.code_uri}}"
-      Handler: "{{service_instance.callback_handler}}"
-      Runtime: "{{service_instance.lambda_runtime}}"
+      CodeUri: "{{service_instance.inputs.code_uri}}"
+      Handler: "{{service_instance.inputs.callback_handler}}"
+      Runtime: "{{service_instance.inputs.lambda_runtime}}"
       Environment:
         Variables:
           STREAM_NAME: !Ref UpdateStream
@@ -35,17 +35,17 @@ Resources:
   DataUpdateStreamReader:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: "{{service_instance.code_uri}}"
-      Handler: "{{service_instance.stream_handler}}"
-      Runtime: "{{service_instance.lambda_runtime}}"
+      CodeUri: "{{service_instance.inputs.code_uri}}"
+      Handler: "{{service_instance.inputs.stream_handler}}"
+      Runtime: "{{service_instance.inputs.lambda_runtime}}"
       Environment:
         Variables:
-          TABLE_NAME: "{{environment.TableName}}"
+          TABLE_NAME: "{{environment.outputs.TableName}}"
           DISCREPANCY_QUEUE: !Ref UpdateDiscrepanciesQueue
           FIREHOSE_STREAM: !Ref EventFirehose
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: "{{environment.TableName}}"
+            TableName: "{{environment.outputs.TableName}}"
         - SQSSendMessagePolicy:
             QueueName: !GetAtt UpdateDiscrepanciesQueue.QueueName
         - FirehoseWritePolicy:
@@ -69,7 +69,7 @@ Resources:
     Properties:
       DeliveryStreamType: DirectPut
       ExtendedS3DestinationConfiguration:
-        BucketARN: {{ environment.AppBucketArn }}
+        BucketARN: {{ environment.outputs.AppBucketArn }}
         BufferingHints:
           IntervalInSeconds: 60
           SizeInMBs: 10
@@ -103,10 +103,13 @@ Resources:
                   - s3:ListBucketMultipartUploads
                   - s3:PutObject
                 Resource:
-                  - {{ environment.AppBucketArn }}
-                  - "{{ environment.AppBucketArn }}/*"
+                  - {{ environment.outputs.AppBucketArn }}
+                  - "{{ environment.outputs.AppBucketArn }}/*"
 {% endif %}
 Outputs:
   HttpApiEndpoint:
     Description: "API Gateway endpoint URL for Prod stage"
     Value: !Sub "https://${CallbackHttpApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/task-update"
+  LambdaRuntime:
+    Description: "The lambda runtime"
+    Value: "{{service_instance.inputs.lambda_runtime}}"

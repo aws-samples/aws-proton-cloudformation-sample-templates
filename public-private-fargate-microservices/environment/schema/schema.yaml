@@ -7,10 +7,6 @@ schema:
       type: object
       description: "Input properties for my environment"
       properties:
-        environment_name_tag:
-          type: string
-          description: "The Name tag to the add to the VPC resources"
-          default: AWS Proton Environment
         vpc_cidr:
           type: string
           description: "This CIDR range for your VPC"
