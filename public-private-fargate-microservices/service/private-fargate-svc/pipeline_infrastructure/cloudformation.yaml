@@ -69,7 +69,7 @@ Resources:
                     },
                     "post_build": {
                       "commands": [
-                        "aws proton-preview --endpoint-url https://proton.$AWS_DEFAULT_REGION.amazonaws.com --region $AWS_DEFAULT_REGION get-service --name-name $service_name | jq -r .service.spec > service.yaml",
+                        "aws proton-preview --endpoint-url https://proton.$AWS_DEFAULT_REGION.amazonaws.com --region $AWS_DEFAULT_REGION get-service --name $service_name | jq -r .service.spec > service.yaml",
                         "yq w service.yaml 'instances[*].spec.image' \"$IMAGE_ID\" > rendered_service.yaml"
                       ]
                     }
