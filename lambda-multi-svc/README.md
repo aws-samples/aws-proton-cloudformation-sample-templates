@@ -85,7 +85,7 @@ First, create an environment template, which will contain all of the environment
 ```bash
 aws proton-preview create-environment-template \
   --region us-west-2 \
-  --template-name "multi-svc-env" \
+  --name "multi-svc-env" \
   --display-name "Multi Service Environment" \
   --description "Environment with DDB Table & S3 Bucket"
 ```
@@ -147,7 +147,7 @@ First, create the service template.
 ```bash
 aws proton-preview create-service-template \
   --region us-west-2 \
-  --template-name "crud-api-service" \
+  --name "crud-api-service" \
   --display-name "CRUD API Service" \
   --description "CRUD API Service backed by AWS Lambda"
 ```

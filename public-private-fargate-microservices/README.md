@@ -166,7 +166,7 @@ aws proton-preview \
   --endpoint-url https://proton.us-east-2.amazonaws.com \
   --region us-east-2 \
   create-service-template \
-  --template-name "lb-public-fargate-svc" \
+  --name "lb-public-fargate-svc" \
   --display-name "PublicLoadbalancedFargateService" \
   --description "Fargate Service with an Application Load Balancer"
 ```
@@ -235,7 +235,7 @@ aws proton-preview \
   --endpoint-url https://proton.us-east-2.amazonaws.com \
   --region us-east-2 \
   create-service-template \
-  --template-name "private-fargate-svc" \
+  --name "private-fargate-svc" \
   --display-name "PrivateBackendFargateService" \
   --description "Private Backend Fargate Service"
 ```
