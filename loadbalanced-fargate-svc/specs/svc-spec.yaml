@@ -10,3 +10,9 @@ instances:
       desired_count: 2
       port: 80
       task_size: "medium"
+  - name: "frontend-prod
+    environment: "Prod"
+    spec:
+      desired_count: 5
+      port: 80
+      task_size: "large"
