@@ -85,7 +85,7 @@ First, create an environment template, which will contain all of the environment
 ```bash
 aws proton-preview create-environment-template \
   --region us-west-2 \
-  --template-name "multi-svc-env" \
+  --name "multi-svc-env" \
   --display-name "Multi Service Environment" \
   --description "Environment with DDB Table & S3 Bucket"
 ```
@@ -147,7 +147,7 @@ First, create the service template.
 ```bash
 aws proton-preview create-service-template \
   --region us-west-2 \
-  --template-name "crud-api-service" \
+  --name "crud-api-service" \
   --display-name "CRUD API Service" \
   --description "CRUD API Service backed by AWS Lambda"
 ```
@@ -159,7 +159,7 @@ aws proton-preview create-service-template-major-version \
   --region us-west-2 \
   --template-name "crud-api-service" \
   --description "Version 1" \
-  --compatible-environment-template-major-version-arns arn:aws:proton:us-west-2:${account_id}:environment-template/crud-api:1
+  --compatible-environment-template-major-version-arns arn:aws:proton:us-west-2:${account_id}:environment-template/multi-svc-env:1
 ```
 
 Now create a minor version which contains the contents of the sample service template. Compress the sample template files and register the minor version:

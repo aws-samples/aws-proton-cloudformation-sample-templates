@@ -52,12 +52,12 @@ Resources:
                     "pre_build": {
                       "commands": [
                         "cd $CODEBUILD_SRC_DIR",
-                        "{{ pipeline.unit_test_command }}"
+                        "{{ pipeline.inputs.unit_test_command }}"
                       ]
                     },
                     "build": {
                       "commands": [
-                        "{{ pipeline.packaging_command }}",
+                        "{{ pipeline.inputs.packaging_command }}",
                         "FUNCTION_URI=s3://$bucket_name/$CODEBUILD_BUILD_NUMBER/function.zip",
                         "aws s3 cp function.zip $FUNCTION_URI"
                       ]
