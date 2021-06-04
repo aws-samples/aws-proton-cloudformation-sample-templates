@@ -6,7 +6,7 @@ pipeline:
 
 instances:
   - name: "front-end"
-    environment: "crud-api-beta"
+    environment: "multi-svc-beta"
     spec:
       resource_name: task
       resource_handler: src/api

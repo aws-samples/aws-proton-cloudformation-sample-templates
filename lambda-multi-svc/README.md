@@ -159,7 +159,7 @@ aws proton-preview create-service-template-major-version \
   --region us-west-2 \
   --template-name "crud-api-service" \
   --description "Version 1" \
-  --compatible-environment-template-major-version-arns arn:aws:proton:us-west-2:${account_id}:environment-template/crud-api:1
+  --compatible-environment-template-major-version-arns arn:aws:proton:us-west-2:${account_id}:environment-template/multi-svc-env:1
 ```
 
 Now create a minor version which contains the contents of the sample service template. Compress the sample template files and register the minor version:

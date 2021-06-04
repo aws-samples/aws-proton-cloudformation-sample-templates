@@ -13,7 +13,7 @@ Resources:
     Type: AWS::Serverless::HttpApi
     Properties:
       FailOnWarnings: false
-{% if service_instance.inputs.code_uri|length %}
+{% if service_instance.inputs.code_uri is defined %}
   ListFunction:
     Type: AWS::Serverless::Function
     Properties:
