@@ -81,7 +81,7 @@ First, create an environment template, which will contain all of the environment
 ```
 aws proton-preview create-environment-template \
   --region us-west-2 \
-  --template-name "public-vpc" \
+  --name "public-vpc" \
   --display-name "PublicVPC" \
   --description "VPC with Public Access and ECS Cluster"
 ```
@@ -143,7 +143,7 @@ First, create the service template.
 ```
 aws proton-preview create-service-template \
   --region us-west-2 \
-  --template-name "lb-fargate-service" \
+  --name "lb-fargate-service" \
   --display-name "LoadbalancedFargateService" \
   --description "Fargate Service with an Application Load Balancer"
 ```
