@@ -51,7 +51,7 @@ Resources:
                       "commands": [
                         "cd $CODEBUILD_SRC_DIR",
                         "$(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)",
-                        "{{ pipeline.unit_test_command }}",
+                        "{{ pipeline.inputs.unit_test_command }}",
                       ]
                     },
                     "build": {
@@ -62,7 +62,7 @@ Resources:
               - Ref: AWS::AccountId
               - >-
                 .dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG",
-                        "docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG -f {{ pipeline.dockerfile }} .",
+                        "docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG -f {{ pipeline.inputs.dockerfile }} .",
                         "docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $IMAGE_ID;",
                         "docker push $IMAGE_ID"
                       ]
