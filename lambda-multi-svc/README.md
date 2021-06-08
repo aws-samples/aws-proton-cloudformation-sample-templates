@@ -65,9 +65,9 @@ aws iam attach-role-policy \
 Then, allow Proton to use that role to provision resources for your services' continuous delivery pipelines:
 
 ```bash
-aws proton-preview update-account-roles \
+aws proton-preview update-account-settings \
   --region us-west-2 \
-  --account-role-details "pipelineServiceRoleArn=arn:aws:iam::${account_id}:role/ProtonServiceRole"
+  --pipeline-service-role-arn "arn:aws:iam::${account_id}:role/ProtonServiceRole"
 ```
 
 Create an AWS CodeStar Connections connection to your application code stored in a GitHub or Bitbucket source code repository.  This connection allows CodePipeline to pull your application source code before building and deploying the code to your Proton service.  To use sample application code, first create a fork of the sample application repository here:
@@ -80,7 +80,7 @@ https://us-west-2.console.aws.amazon.com/codesuite/settings/connections?region=u
 
 Register the sample environment template, which contains a simple Amazon DynamoDB table.
 
-First, create an environment template, which will contain all of the environment template's major and minor versions.
+First, create an environment template, which will contain all of the environment template's versions.
 
 ```bash
 aws proton-preview create-environment-template \
@@ -90,16 +90,7 @@ aws proton-preview create-environment-template \
   --description "Environment with DDB Table & S3 Bucket"
 ```
 
-Then, create a new major version for the `crud-api` environment template.
-
-```bash
-aws proton-preview create-environment-template-major-version \
-  --region us-west-2 \
-  --template-name "multi-svc-env" \
-  --description "Version 1"
-```
-
-Now create a minor version which contains the contents of the sample environment template. Compress the sample template files and register the minor version:
+Now create a version which contains the contents of the sample environment template. Compress the sample template files and register the version:
 
 ```bash
 tar -zcvf env-template.tar.gz environment/
@@ -108,16 +99,14 @@ aws s3 cp env-template.tar.gz s3://proton-cli-templates-${account_id}/env-templa
 
 rm env-template.tar.gz
 
-aws proton-preview create-environment-template-minor-version \
+aws proton-preview create-environment-template-version \
   --region us-west-2 \
   --template-name "multi-svc-env" \
   --description "Version 1" \
-  --major-version "1" \
-  --source-s3-bucket proton-cli-templates-${account_id} \
-  --source-s3-key env-template.tar.gz
+  --source s3="{bucket=proton-cli-templates-${account_id},key=env-template.tar.gz}"
 ```
 
-Wait for the environment template minor version to be successfully registered:
+Wait for the environment template version to be successfully registered:
 
 ```bash
 aws proton-preview wait environment-template-registration-complete \
@@ -127,10 +116,10 @@ aws proton-preview wait environment-template-registration-complete \
   --minor-version "0"
 ```
 
-You can now publish the environment template minor version, making it available for users in your AWS account to create Proton environments.
+You can now publish the environment template version, making it available for users in your AWS account to create Proton environments.
 
 ```bash
-aws proton-preview update-environment-template-minor-version \
+aws proton-preview update-environment-template-version \
   --region us-west-2 \
   --template-name "multi-svc-env" \
   --major-version "1" \
@@ -152,35 +141,24 @@ aws proton-preview create-service-template \
   --description "CRUD API Service backed by AWS Lambda"
 ```
 
-Then, create a major version for the `http-api-service` service template and associate it with the `crud-api` environment template created above.
+Now create a version which contains the contents of the sample service template. Compress the sample template files and register the version:
 
 ```bash
-aws proton-preview create-service-template-major-version \
-  --region us-west-2 \
-  --template-name "crud-api-service" \
-  --description "Version 1" \
-  --compatible-environment-template-major-version-arns arn:aws:proton:us-west-2:${account_id}:environment-template/multi-svc-env:1
-```
+tar -zcvf svc-template.tar.gz service-crud/
 
-Now create a minor version which contains the contents of the sample service template. Compress the sample template files and register the minor version:
-
-```bash
-tar -zcvf svc-crud-template.tar.gz service-crud/
-
-aws s3 cp svc-crud-template.tar.gz s3://proton-cli-templates-${account_id}/svc-crud-template.tar.gz --region us-west-2
+aws s3 cp svc-template.tar.gz s3://proton-cli-templates-${account_id}/svc-template.tar.gz --region us-west-2
 
 rm svc-template.tar.gz
 
-aws proton-preview create-service-template-minor-version \
+aws proton-preview create-service-template-version \
   --region us-west-2 \
   --template-name "crud-api-service" \
   --description "Version 1" \
-  --major-version "1" \
-  --source-s3-bucket proton-cli-templates-${account_id} \
-  --source-s3-key svc-crud-template.tar.gz
+  --source s3="{bucket=proton-cli-templates-${account_id},key=svc-template.tar.gz}" \
+  --compatible-environment-templates '[{"templateName":"multi-svc-env","majorVersion":"1"}]'
 ```
 
-Wait for the service template minor version to be successfully registered:
+Wait for the service template version to be successfully registered:
 
 ```bash
 aws proton-preview wait service-template-registration-complete \
@@ -190,10 +168,10 @@ aws proton-preview wait service-template-registration-complete \
   --minor-version "0"
 ```
 
-You can now publish the service template minor version, making it available for users in your AWS account to create Proton services.
+You can now publish the service template version, making it available for users in your AWS account to create Proton services.
 
 ```bash
-aws proton-preview update-service-template-minor-version \
+aws proton-preview update-service-template-version \
   --region us-west-2 \
   --template-name "crud-api-service" \
   --major-version "1" \
@@ -252,4 +230,3 @@ aws proton-preview wait service-creation-complete \
   --region us-west-2 \
   --name "tasks-front-end"
 ```
-
