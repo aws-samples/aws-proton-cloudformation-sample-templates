@@ -74,9 +74,9 @@ aws iam attach-role-policy \
 Then, allow Proton to use that role to provision resources for your services' continuous delivery pipelines:
 
 ```
-aws proton-preview update-account-roles \
+aws proton-preview update-account-settings \
   --region us-east-2 \
-  --account-role-details "pipelineServiceRoleArn=arn:aws:iam::${account_id}:role/ProtonServiceRole"
+  --pipeline-service-role-arn "pipelineServiceRoleArn=arn:aws:iam::${account_id}:role/ProtonServiceRole"
 ```
 
 Create an AWS CodeStar Connections connection to your application code stored in a GitHub or Bitbucket source code repository.  This connection allows CodePipeline to pull your application source code before building and deploying the code to your Proton service. To use sample application code for the public service, first create a fork of the sample application repository here:
@@ -89,11 +89,10 @@ https://us-east-2.console.aws.amazon.com/codesuite/settings/connections?region=u
 
 Register the sample environment template, which contains an ECS Cluster and a VPC with two public subnets.
 
-First, create an environment template, which will contain all of the environment template's major and minor versions.
+First, create an environment template, which will contain all of the environment template's versions.
 
 ```
 aws proton-preview \
-  --endpoint-url https://proton.us-east-2.amazonaws.com \
   --region us-east-2 \
   create-environment-template \
   --name "aws-proton-fargate-microservices" \
@@ -101,18 +100,7 @@ aws proton-preview \
   --description "Proton Example Dev VPC with Public facing services and with Private backend services on ECS cluster with Fargate compute"
 ```
 
-Then, create a new major version for the `aws-proton-fargate-microservices` environment template.
-
-```
-aws proton-preview \
-  --endpoint-url https://proton.us-east-2.amazonaws.com \
-  --region us-east-2 \
-  create-environment-template-major-version \
-  --template-name "aws-proton-fargate-microservices" \
-  --description "Version 1"
-```
-
-Now create a minor version which contains the contents of the sample environment template. Compress the sample template files and register the minor version:
+Now create a version which contains the contents of the sample environment template. Compress the sample template files and register the version:
 
 ```
 tar -zcvf env-template.tar.gz environment/
@@ -122,17 +110,14 @@ aws s3 cp env-template.tar.gz s3://proton-cli-templates-${account_id}/env-templa
 rm env-template.tar.gz
 
 aws proton-preview \
-  --endpoint-url https://proton.us-east-2.amazonaws.com \
   --region us-east-2 \
-  create-environment-template-minor-version \
+  create-environment-template-version \
   --template-name "aws-proton-fargate-microservices" \
   --description "Proton Example Dev Environment Version 1" \
-  --major-version "1" \
-  --source-s3-bucket proton-cli-templates-${account_id} \
-  --source-s3-key env-template.tar.gz
+  --source s3="{bucket=proton-cli-templates-${account_id},key=env-template.tar.gz}"
 ```
 
-Wait for the environment template minor version to be successfully registered:
+Wait for the environment template version to be successfully registered:
 
 ```
 aws proton-preview wait environment-template-registration-complete \
@@ -142,13 +127,12 @@ aws proton-preview wait environment-template-registration-complete \
   --minor-version "0"
 ```
 
-You can now publish the environment template minor version, making it available for users in your AWS account to create Proton environments.
+You can now publish the environment template version, making it available for users in your AWS account to create Proton environments.
 
 ```
 aws proton-preview \
-  --endpoint-url https://proton.us-east-2.amazonaws.com \
   --region us-east-2 \
-  update-environment-template-minor-version \
+  update-environment-template-version \
   --template-name "aws-proton-fargate-microservices" \
   --major-version "1" \
   --minor-version "0" \
@@ -163,7 +147,6 @@ Register the sample services templates, which contains all the resources require
 
 ```
 aws proton-preview \
-  --endpoint-url https://proton.us-east-2.amazonaws.com \
   --region us-east-2 \
   create-service-template \
   --name "lb-public-fargate-svc" \
@@ -171,19 +154,7 @@ aws proton-preview \
   --description "Fargate Service with an Application Load Balancer"
 ```
 
-Then, create a major version for the `lb-public-fargate-service` service template and associate it with the `aws-proton-fargate-microservices` environment template created above.
-
-```
-aws proton-preview \
-  --endpoint-url https://proton.us-east-2.amazonaws.com \
-  --region us-east-2 \
-  create-service-template-major-version \
-  --template-name "lb-public-fargate-svc" \
-  --description "Version 1" \
-  --compatible-environment-template-major-version-arns arn:aws:proton:us-east-2:${account_id}:environment-template/aws-proton-fargate-microservices:1
-```
-
-Now create a minor version which contains the contents of the sample service template. Compress the sample template files and register the minor version:
+Now create a version which contains the contents of the sample service template. Compress the sample template files and register the version:
 
 ```
 tar -zcvf svc-private-template.tar.gz service/loadbalanced-public-svc/
@@ -193,21 +164,18 @@ aws s3 cp svc-private-template.tar.gz s3://proton-cli-templates-${account_id}/sv
 rm svc-private-template.tar.gz
 
 aws proton-preview \
-  --endpoint-url https://proton.us-east-2.amazonaws.com \
   --region us-east-2 \
-  create-service-template-minor-version \
+  create-service-template-version \
   --template-name "lb-public-fargate-svc" \
   --description "Version 1" \
-  --major-version "1" \
-  --source-s3-bucket proton-cli-templates-${account_id} \
-  --source-s3-key svc-private-template.tar.gz
+  --source s3="{bucket=proton-cli-templates-${account_id},key=svc-private-template.tar.gz}" \
+  --compatible-environment-templates '[{"templateName":"aws-proton-fargate-microservices","majorVersion":"1"}]'
 ```
 
-Wait for the service template minor version to be successfully registered:
+Wait for the service template version to be successfully registered:
 
 ```
 aws proton-preview \
-  --endpoint-url https://proton.us-east-2.amazonaws.com \
   --region us-east-2 \
   wait service-template-registration-complete \
   --template-name "lb-public-fargate-svc" \
@@ -215,13 +183,12 @@ aws proton-preview \
   --minor-version "0"
 ```
 
-You can now publish the Public service template minor version, making it available for users in your AWS account to create Proton services.
+You can now publish the Public service template version, making it available for users in your AWS account to create Proton services.
 
 ```
 aws proton-preview \
-  --endpoint-url https://proton.us-east-2.amazonaws.com \
   --region us-east-2 \
-  update-service-template-minor-version \
+  update-service-template-version \
   --template-name "lb-public-fargate-svc" \
   --major-version "1" \
   --minor-version "0" \
@@ -232,7 +199,6 @@ aws proton-preview \
 
 ```
 aws proton-preview \
-  --endpoint-url https://proton.us-east-2.amazonaws.com \
   --region us-east-2 \
   create-service-template \
   --name "private-fargate-svc" \
@@ -240,19 +206,7 @@ aws proton-preview \
   --description "Private Backend Fargate Service"
 ```
 
-Then, create a major version for the `private-fargate-service` service template and associate it with the `aws-proton-fargate-microservices` environment template created above.
-
-```
-aws proton-preview \
-  --endpoint-url https://proton.us-east-2.amazonaws.com \
-  --region us-east-2 \
-  create-service-template-major-version \
-  --template-name "private-fargate-svc" \
-  --description "Version 1" \
-  --compatible-environment-template-major-version-arns arn:aws:proton:us-east-2:${account_id}:environment-template/aws-proton-fargate-microservices:1
-```
-
-Now create a minor version which contains the contents of the sample service template. Compress the sample template files and register the minor version:
+Now create a version which contains the contents of the sample service template. Compress the sample template files and register the version:
 
 ```
 tar -zcvf svc-private-template.tar.gz service/private-fargate-svc/
@@ -262,21 +216,18 @@ aws s3 cp svc-private-template.tar.gz s3://proton-cli-templates-${account_id}/sv
 rm svc-private-template.tar.gz
 
 aws proton-preview \
-  --endpoint-url https://proton.us-east-2.amazonaws.com \
   --region us-east-2 \
-  create-service-template-minor-version \
+  create-service-template-version \
   --template-name "private-fargate-svc" \
   --description "Version 1" \
-  --major-version "1" \
-  --source-s3-bucket proton-cli-templates-${account_id} \
-  --source-s3-key svc-private-template.tar.gz
+  --source s3="{bucket=proton-cli-templates-${account_id},key=svc-private-template.tar.gz}" \
+  --compatible-environment-templates '[{"templateName":"aws-proton-fargate-microservices","majorVersion":"1"}]'
 ```
 
-Wait for the service template minor version to be successfully registered:
+Wait for the service template version to be successfully registered:
 
 ```
 aws proton-preview \
-  --endpoint-url https://proton.us-east-2.amazonaws.com \
   --region us-east-2 \
   wait service-template-registration-complete \
   --template-name "private-fargate-svc" \
@@ -284,13 +235,12 @@ aws proton-preview \
   --minor-version "0"
 ```
 
-You can now publish the Public service template minor version, making it available for users in your AWS account to create Proton services.
+You can now publish the Public service template version, making it available for users in your AWS account to create Proton services.
 
 ```
 aws proton-preview \
-  --endpoint-url https://proton.us-east-2.amazonaws.com \
   --region us-east-2 \
-  update-service-template-minor-version \
+  update-service-template-version \
   --template-name "private-fargate-svc" \
   --major-version "1" \
   --minor-version "0" \
