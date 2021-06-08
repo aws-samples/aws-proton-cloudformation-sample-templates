@@ -34,18 +34,6 @@ First, make sure you have the AWS CLI installed, and configured. Run the followi
 account_id=`aws sts get-caller-identity|jq -r ".Account"`
 ```
 
-### Configure the AWS CLI
-
-While AWS Proton is in preview, you will need to manually configure the AWS CLI. The following commands will add the Proton commands to the AWS CLI.
-
-```
-aws s3 cp s3://aws-proton-preview-public-files/model/proton-2020-07-20.normal.json .
-aws s3 cp s3://aws-proton-preview-public-files/model/waiters2.json .
-aws configure add-model --service-model file://proton-2020-07-20.normal.json --service-name proton-preview
-mv waiters2.json ~/.aws/models/proton-preview/2020-07-20/waiters-2.json
-rm proton-2020-07-20.normal.json
-```
-
 ### Configure IAM Role, S3 Bucket, and CodeStar Connections Connection
 
 Before you register your templates and deploy your environments and services, you will need to create an Amazon IAM role so that AWS Proton can manage resources in your AWS account, an Amazon S3 bucket to store your templates, and a CodeStar Connections connection to pull and deploy your application code.
@@ -74,7 +62,7 @@ aws iam attach-role-policy \
 Then, allow Proton to use that role to provision resources for your services' continuous delivery pipelines:
 
 ```
-aws proton-preview update-account-settings \
+aws proton update-account-settings \
   --region us-east-2 \
   --pipeline-service-role-arn "arn:aws:iam::${account_id}:role/ProtonServiceRole"
 ```
@@ -92,7 +80,7 @@ Register the sample environment template, which contains an ECS Cluster and a VP
 First, create an environment template, which will contain all of the environment template's versions.
 
 ```
-aws proton-preview \
+aws proton \
   --region us-east-2 \
   create-environment-template \
   --name "aws-proton-fargate-microservices" \
@@ -109,7 +97,7 @@ aws s3 cp env-template.tar.gz s3://proton-cli-templates-${account_id}/env-templa
 
 rm env-template.tar.gz
 
-aws proton-preview \
+aws proton \
   --region us-east-2 \
   create-environment-template-version \
   --template-name "aws-proton-fargate-microservices" \
@@ -120,7 +108,7 @@ aws proton-preview \
 Wait for the environment template version to be successfully registered:
 
 ```
-aws proton-preview wait environment-template-registration-complete \
+aws proton wait environment-template-registration-complete \
   --region us-east-2 \
   --template-name "aws-proton-fargate-microservices" \
   --major-version "1" \
@@ -130,7 +118,7 @@ aws proton-preview wait environment-template-registration-complete \
 You can now publish the environment template version, making it available for users in your AWS account to create Proton environments.
 
 ```
-aws proton-preview \
+aws proton \
   --region us-east-2 \
   update-environment-template-version \
   --template-name "aws-proton-fargate-microservices" \
@@ -146,7 +134,7 @@ Register the sample services templates, which contains all the resources require
 ### First, create the Public service template.
 
 ```
-aws proton-preview \
+aws proton \
   --region us-east-2 \
   create-service-template \
   --name "lb-public-fargate-svc" \
@@ -163,7 +151,7 @@ aws s3 cp svc-private-template.tar.gz s3://proton-cli-templates-${account_id}/sv
 
 rm svc-private-template.tar.gz
 
-aws proton-preview \
+aws proton \
   --region us-east-2 \
   create-service-template-version \
   --template-name "lb-public-fargate-svc" \
@@ -175,7 +163,7 @@ aws proton-preview \
 Wait for the service template version to be successfully registered:
 
 ```
-aws proton-preview \
+aws proton \
   --region us-east-2 \
   wait service-template-registration-complete \
   --template-name "lb-public-fargate-svc" \
@@ -186,7 +174,7 @@ aws proton-preview \
 You can now publish the Public service template version, making it available for users in your AWS account to create Proton services.
 
 ```
-aws proton-preview \
+aws proton \
   --region us-east-2 \
   update-service-template-version \
   --template-name "lb-public-fargate-svc" \
@@ -198,7 +186,7 @@ aws proton-preview \
 ### Second, create the Private service template.
 
 ```
-aws proton-preview \
+aws proton \
   --region us-east-2 \
   create-service-template \
   --name "private-fargate-svc" \
@@ -215,7 +203,7 @@ aws s3 cp svc-private-template.tar.gz s3://proton-cli-templates-${account_id}/sv
 
 rm svc-private-template.tar.gz
 
-aws proton-preview \
+aws proton \
   --region us-east-2 \
   create-service-template-version \
   --template-name "private-fargate-svc" \
@@ -227,7 +215,7 @@ aws proton-preview \
 Wait for the service template version to be successfully registered:
 
 ```
-aws proton-preview \
+aws proton \
   --region us-east-2 \
   wait service-template-registration-complete \
   --template-name "private-fargate-svc" \
@@ -238,7 +226,7 @@ aws proton-preview \
 You can now publish the Public service template version, making it available for users in your AWS account to create Proton services.
 
 ```
-aws proton-preview \
+aws proton \
   --region us-east-2 \
   update-service-template-version \
   --template-name "private-fargate-svc" \
@@ -254,7 +242,7 @@ With the registered and published environment and service templates, you can now
 First, deploy a Proton environment. This command reads your environment spec at `specs/env-spec.yaml`, merges it with the environment template created above, and deploys the resources in a CloudFormation stack in your AWS account using the Proton service role.
 
 ```
-aws proton-preview create-environment \
+aws proton create-environment \
   --region us-east-2 \
   --name "Beta" \
   --template-name aws-proton-fargate-microservices \
@@ -266,7 +254,7 @@ aws proton-preview create-environment \
 Wait for the environment to successfully deploy.
 
 ```
-aws proton-preview wait environment-deployment-complete \
+aws proton wait environment-deployment-complete \
   --region us-east-2 \
   --name "Beta"
 ```
@@ -276,7 +264,7 @@ Then, create a Public Proton service and deploy it into your Proton environment.
 Fill in your CodeStar Connections connection ID and your source code repository details in this command.
 
 ```
-aws proton-preview create-service \
+aws proton create-service \
   --region us-east-2 \
   --name "front-end" \
   --repository-connection-arn arn:aws:codestar-connections:us-east-2:${account_id}:connection/<your-codestar-connection-id> \
@@ -290,7 +278,7 @@ aws proton-preview create-service \
 Wait for the service to successfully deploy.
 
 ```
-aws proton-preview wait service-creation-complete \
+aws proton wait service-creation-complete \
   --region us-east-2 \
   --name "front-end"
 ```
@@ -300,7 +288,7 @@ And finally, create a Private Proton service and deploy it into your Proton envi
 Fill in your CodeStar Connections connection ID and your source code repository details in this command.
 
 ```
-aws proton-preview create-service \
+aws proton create-service \
   --region us-east-2 \
   --name "back-end" \
   --repository-connection-arn arn:aws:codestar-connections:us-east-2:${account_id}:connection/<your-codestar-connection-id> \
@@ -314,7 +302,7 @@ aws proton-preview create-service \
 Wait for the service to successfully deploy.
 
 ```
-aws proton-preview wait service-creation-complete \
+aws proton wait service-creation-complete \
   --region us-east-2 \
   --name "back-end"
 ```
