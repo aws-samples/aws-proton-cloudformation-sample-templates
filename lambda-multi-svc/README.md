@@ -67,7 +67,7 @@ Then, allow Proton to use that role to provision resources for your services' co
 ```bash
 aws proton-preview update-account-settings \
   --region us-west-2 \
-  --pipeline-service-role-arn "pipelineServiceRoleArn=arn:aws:iam::${account_id}:role/ProtonServiceRole"
+  --pipeline-service-role-arn "arn:aws:iam::${account_id}:role/ProtonServiceRole"
 ```
 
 Create an AWS CodeStar Connections connection to your application code stored in a GitHub or Bitbucket source code repository.  This connection allows CodePipeline to pull your application source code before building and deploying the code to your Proton service.  To use sample application code, first create a fork of the sample application repository here:
