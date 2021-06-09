@@ -100,17 +100,17 @@ rm env-template.tar.gz
 aws proton \
   --region us-east-2 \
   create-environment-template-version \
-  --template-name "aws-proton-fargate-microservices" \
+  --name "aws-proton-fargate-microservices" \
   --description "Proton Example Dev Environment Version 1" \
   --source s3="{bucket=proton-cli-templates-${account_id},key=env-template.tar.gz}"
 ```
 
-Wait for the environment template version to be successfully registered:
+Wait for the environment template version to be successfully registered. Use this command to verify status
 
 ```
-aws proton wait environment-template-registration-complete \
+aws proton get-environment-template \
   --region us-east-2 \
-  --template-name "aws-proton-fargate-microservices" \
+  --name "aws-proton-fargate-microservices" \
   --major-version "1" \
   --minor-version "0"
 ```
@@ -121,7 +121,7 @@ You can now publish the environment template version, making it available for us
 aws proton \
   --region us-east-2 \
   update-environment-template-version \
-  --template-name "aws-proton-fargate-microservices" \
+  --name "aws-proton-fargate-microservices" \
   --major-version "1" \
   --minor-version "0" \
   --status "PUBLISHED"
@@ -154,19 +154,18 @@ rm svc-private-template.tar.gz
 aws proton \
   --region us-east-2 \
   create-service-template-version \
-  --template-name "lb-public-fargate-svc" \
+  --name "lb-public-fargate-svc" \
   --description "Version 1" \
   --source s3="{bucket=proton-cli-templates-${account_id},key=svc-private-template.tar.gz}" \
   --compatible-environment-templates '[{"templateName":"aws-proton-fargate-microservices","majorVersion":"1"}]'
 ```
 
-Wait for the service template version to be successfully registered:
+Wait for the service template version to be successfully registered. Use this command to verify status
 
 ```
-aws proton \
+aws proton get-service-template \
   --region us-east-2 \
-  wait service-template-registration-complete \
-  --template-name "lb-public-fargate-svc" \
+  --name "lb-public-fargate-svc" \
   --major-version "1" \
   --minor-version "0"
 ```
@@ -177,7 +176,7 @@ You can now publish the Public service template version, making it available for
 aws proton \
   --region us-east-2 \
   update-service-template-version \
-  --template-name "lb-public-fargate-svc" \
+  --name "lb-public-fargate-svc" \
   --major-version "1" \
   --minor-version "0" \
   --status "PUBLISHED"
@@ -206,19 +205,19 @@ rm svc-private-template.tar.gz
 aws proton \
   --region us-east-2 \
   create-service-template-version \
-  --template-name "private-fargate-svc" \
+  --name "private-fargate-svc" \
   --description "Version 1" \
   --source s3="{bucket=proton-cli-templates-${account_id},key=svc-private-template.tar.gz}" \
   --compatible-environment-templates '[{"templateName":"aws-proton-fargate-microservices","majorVersion":"1"}]'
 ```
 
-Wait for the service template version to be successfully registered:
+Wait for the service template version to be successfully registered. Use this command to verify status
 
 ```
 aws proton \
   --region us-east-2 \
-  wait service-template-registration-complete \
-  --template-name "private-fargate-svc" \
+  get-service-template \
+  --name "private-fargate-svc" \
   --major-version "1" \
   --minor-version "0"
 ```
@@ -229,7 +228,7 @@ You can now publish the Public service template version, making it available for
 aws proton \
   --region us-east-2 \
   update-service-template-version \
-  --template-name "private-fargate-svc" \
+  --name "private-fargate-svc" \
   --major-version "1" \
   --minor-version "0" \
   --status "PUBLISHED"
@@ -251,10 +250,10 @@ aws proton create-environment \
   --spec file://specs/env-spec.yaml
 ```
 
-Wait for the environment to successfully deploy.
+Wait for the environment to successfully deploy. Use this command to verify deployment status:
 
 ```
-aws proton wait environment-deployment-complete \
+aws proton get-environment \
   --region us-east-2 \
   --name "Beta"
 ```
@@ -275,10 +274,10 @@ aws proton create-service \
   --spec file://specs/svc-public-spec.yaml
 ```
 
-Wait for the service to successfully deploy.
+Wait for the service to successfully deploy. Use this command to verify deployment status
 
 ```
-aws proton wait service-creation-complete \
+aws proton get-service \
   --region us-east-2 \
   --name "front-end"
 ```
@@ -299,10 +298,10 @@ aws proton create-service \
   --spec file://specs/svc-private-spec.yaml
 ```
 
-Wait for the service to successfully deploy.
+Wait for the service to successfully deploy. Use this command to verify deployment status:
 
 ```
-aws proton wait service-creation-complete \
+aws proton get-service \
   --region us-east-2 \
   --name "back-end"
 ```
