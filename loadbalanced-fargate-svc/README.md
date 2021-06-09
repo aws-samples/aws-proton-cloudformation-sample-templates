@@ -90,10 +90,10 @@ aws proton create-environment-template-version \
   --source s3="{bucket=proton-cli-templates-${account_id},key=env-template.tar.gz}"
 ```
 
-Wait for the environment template version to be successfully registered:
+Wait for the environment template version to be successfully registered. Use this command to check for registration status:
 
 ```
-aws proton wait environment-template-registration-complete \
+aws proton get-environment-template \
   --region us-west-2 \
   --template-name "public-vpc" \
   --major-version "1" \
@@ -143,10 +143,10 @@ aws proton create-service-template-version \
   --compatible-environment-templates '[{"templateName":"public-vpc","majorVersion":"1"}]'
 ```
 
-Wait for the service template version to be successfully registered:
+Wait for the service template to be successfully registered. Use this command to check for registration status:
 
 ```
-aws proton wait service-template-registration-complete \
+aws proton get-service-template \
   --region us-west-2 \
   --template-name "lb-fargate-service" \
   --major-version "1" \
@@ -180,10 +180,10 @@ aws proton create-environment \
   --spec file://specs/env-spec.yaml
 ```
 
-Wait for the environment to successfully deploy.
+Wait for the environment to successfully deploy. Use this command to check for deployment status:
 
 ```
-aws proton wait environment-deployment-complete \
+aws proton get-environment \
   --region us-west-2 \
   --name "Beta"
 ```
@@ -204,10 +204,10 @@ aws proton create-service \
   --spec file://specs/svc-spec.yaml
 ```
 
-Wait for the service to successfully deploy.
+Wait for the service to successfully deploy. Use this command to check for deployment status:
 
 ```
-aws proton wait service-creation-complete \
+aws proton get-service \
   --region us-west-2 \
   --service-name "front-end"
 ```
