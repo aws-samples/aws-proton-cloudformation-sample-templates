@@ -38,10 +38,6 @@ Resources:
                             "dotnetcore3.1": {"dotnet": "3.1"}
                           }[service_instances[0].outputs.LambdaRuntime] | tojson | safe }},
                       "commands": [
-                        "aws s3 cp s3://aws-proton-preview-public-files/model/proton-2020-07-20.normal.json .",
-                        "aws s3 cp s3://aws-proton-preview-public-files/model/waiters2.json .",
-                        "aws configure add-model --service-model file://proton-2020-07-20.normal.json --service-name proton-preview",
-                        "mv waiters2.json ~/.aws/models/proton-preview/2020-07-20/waiters-2.json",
                         "echo 'f6bd1536a743ab170b35c94ed4c7c4479763356bd543af5d391122f4af852460  yq_linux_amd64' > yq_linux_amd64.sha",
                         "wget https://github.com/mikefarah/yq/releases/download/3.4.0/yq_linux_amd64",
                         "sha256sum -c yq_linux_amd64.sha",
@@ -64,7 +60,7 @@ Resources:
                     },
                     "post_build": {
                       "commands": [
-                        "aws proton-preview --endpoint-url https://proton.$AWS_DEFAULT_REGION.amazonaws.com --region $AWS_DEFAULT_REGION get-service --name $service_name | jq -r .service.spec > service.yaml",
+                        "aws proton --endpoint-url https://proton.$AWS_DEFAULT_REGION.amazonaws.com --region $AWS_DEFAULT_REGION get-service --name $service_name | jq -r .service.spec > service.yaml",
                         "yq w service.yaml 'instances[*].spec.code_uri' \"$FUNCTION_URI\" > rendered_service.yaml"
                       ]
                     }
@@ -107,18 +103,10 @@ Resources:
           {
             "version": "0.2",
             "phases": {
-              "install": {
-                "commands": [
-                  "aws s3 cp s3://aws-proton-preview-public-files/model/proton-2020-07-20.normal.json .",
-                  "aws s3 cp s3://aws-proton-preview-public-files/model/waiters2.json .",
-                  "aws configure add-model --service-model file://proton-2020-07-20.normal.json --service-name proton-preview",
-                  "mv waiters2.json ~/.aws/models/proton-preview/2020-07-20/waiters-2.json"
-                ]
-              },
               "build": {
                 "commands": [
-                  "aws proton-preview --endpoint-url https://proton.$AWS_DEFAULT_REGION.amazonaws.com --region $AWS_DEFAULT_REGION update-service-instance --deployment-type CURRENT_VERSION --name $service_instance_name --service-name $service_name --spec file://rendered_service.yaml",
-                  "aws proton-preview --endpoint-url https://proton.$AWS_DEFAULT_REGION.amazonaws.com --region $AWS_DEFAULT_REGION wait service-instance-update-complete --name $service_instance_name --service-name $service_name"
+                  "aws proton --endpoint-url https://proton.$AWS_DEFAULT_REGION.amazonaws.com --region $AWS_DEFAULT_REGION update-service-instance --deployment-type CURRENT_VERSION --name $service_instance_name --service-name $service_name --spec file://rendered_service.yaml",
+                  "aws proton --endpoint-url https://proton.$AWS_DEFAULT_REGION.amazonaws.com --region $AWS_DEFAULT_REGION wait service-instance-update-complete --name $service_instance_name --service-name $service_name"
                 ]
               }
             }
@@ -194,10 +182,6 @@ Resources:
               - proton:GetService
             Effect: Allow
             Resource: "*"
-          - Action: s3:GetObject
-            Effect: Allow
-            Resource:
-              - "arn:aws:s3:::aws-proton-preview-public-files/*"
           - Action:
               - s3:GetObject*
               - s3:GetBucket*
@@ -322,10 +306,6 @@ Resources:
               - proton:GetServiceInstance
             Effect: Allow
             Resource: "*"
-          - Action: s3:GetObject
-            Effect: Allow
-            Resource:
-              - "arn:aws:s3:::aws-proton-preview-public-files/*"
           - Action:
               - s3:GetObject*
               - s3:GetBucket*
