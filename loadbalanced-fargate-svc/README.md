@@ -93,7 +93,7 @@ aws proton create-environment-template-version \
 Wait for the environment template version to be successfully registered. Use this command to check for registration status:
 
 ```
-aws proton get-environment-template \
+aws proton get-environment-template-version \
   --region us-west-2 \
   --template-name "public-vpc" \
   --major-version "1" \
@@ -146,7 +146,7 @@ aws proton create-service-template-version \
 Wait for the service template to be successfully registered. Use this command to check for registration status:
 
 ```
-aws proton get-service-template \
+aws proton get-service-template-version \
   --region us-west-2 \
   --template-name "lb-fargate-service" \
   --major-version "1" \
