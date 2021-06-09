@@ -108,9 +108,9 @@ aws proton \
 Wait for the environment template version to be successfully registered. Use this command to verify status
 
 ```
-aws proton get-environment-template \
+aws proton get-environment-template-version \
   --region us-east-2 \
-  --name "aws-proton-fargate-microservices" \
+  --template-name "aws-proton-fargate-microservices" \
   --major-version "1" \
   --minor-version "0"
 ```
@@ -163,9 +163,9 @@ aws proton \
 Wait for the service template version to be successfully registered. Use this command to verify status
 
 ```
-aws proton get-service-template \
+aws proton get-service-template-version \
   --region us-east-2 \
-  --name "lb-public-fargate-svc" \
+  --template-name "lb-public-fargate-svc" \
   --major-version "1" \
   --minor-version "0"
 ```
@@ -228,7 +228,7 @@ You can now publish the Public service template version, making it available for
 aws proton \
   --region us-east-2 \
   update-service-template-version \
-  --name "private-fargate-svc" \
+  --template-name "private-fargate-svc" \
   --major-version "1" \
   --minor-version "0" \
   --status "PUBLISHED"
