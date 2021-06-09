@@ -94,10 +94,10 @@ aws proton create-environment-template-version \
   --source s3="{bucket=proton-cli-templates-${account_id},key=env-template.tar.gz}"
 ```
 
-Wait 5 minutes for the environment template to be successfully registered. You can try this command to see if the template is in REGISTRATION_COMPLETE status
+Wait for the environment template version to be successfully registered. You can try this command to see the registration status
 
 ```bash
-aws proton get-environment-template \
+aws proton get-environment-template-version \
   --region us-west-2 \
   --template-name "multi-svc-env" \
   --major-version "1" \
@@ -146,10 +146,10 @@ aws proton create-service-template-version \
   --compatible-environment-templates '[{"templateName":"multi-svc-env","majorVersion":"1"}]'
 ```
 
-Wait 5 minutes for the service template to be successfully registered. You can try this command to see if the template is in REGISTRATION_COMPLETE status
+Wait for the service template version to be successfully registered. You can try this command to see the registration status
 
 ```bash
-aws proton get-service-template \
+aws proton get-service-template-version \
   --region us-west-2 \
   --template-name "crud-api-service" \
   --major-version "1" \
