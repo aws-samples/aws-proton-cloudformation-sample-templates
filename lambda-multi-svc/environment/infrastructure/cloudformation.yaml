@@ -24,7 +24,8 @@ Resources:
             - AttributeName: hk
               KeyType: RANGE
           Projection:
-            ProjectionType: ALL {% if environment.inputs.ttl_attribute|length %}
+            ProjectionType: ALL
+{% if environment.inputs.ttl_attribute|length %}
       TimeToLiveSpecification:
         AttributeName: "{{ environment.inputs.ttl_attribute }}"
         Enabled: true
