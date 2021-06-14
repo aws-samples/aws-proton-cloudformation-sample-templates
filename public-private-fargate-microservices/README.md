@@ -30,10 +30,6 @@ You can register and deploy these templates by using the AWS Proton console. To 
 
 First, make sure you have the AWS CLI installed, and configured. Run the following command to set an environment variable with your account ID:
 
-```
-account_id=`aws sts get-caller-identity|jq -r ".Account"`
-```
-OR
 ```bash
 account_id=`aws sts get-caller-identity --query Account --output text`
 ```
