@@ -24,6 +24,10 @@ First, make sure you have the AWS CLI installed and configured. Run the followin
 ```bash
 account_id=`aws sts get-caller-identity|jq -r ".Account"`
 ```
+OR
+```bash
+account_id=`aws sts get-caller-identity --query Account --output text`
+```
 
 ### Configure IAM Role, S3 Bucket, and CodeStar Connections Connection
 
