@@ -19,6 +19,6 @@ schema:
           pattern: ([0-9]{1,3}\.){3}[0-9]{1,3}($|/(16|24))
         subnet_two_cidr:
           type: string
-          description: "The CIDR range for subnet one"
+          description: "The CIDR range for subnet two"
           default: 10.0.1.0/24
           pattern: ([0-9]{1,3}\.){3}[0-9]{1,3}($|/(16|24))
