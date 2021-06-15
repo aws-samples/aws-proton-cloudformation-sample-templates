@@ -138,7 +138,6 @@ aws proton create-service-template-version \
   --region us-west-2 \
   --template-name "lb-fargate-service" \
   --description "Version 1" \
-  --major-version "1" \
   --source s3="{bucket=proton-cli-templates-${account_id},key=svc-template.tar.gz}" \
   --compatible-environment-templates '[{"templateName":"public-vpc","majorVersion":"1"}]'
 ```
