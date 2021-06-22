@@ -30,6 +30,13 @@ Resources:
         Enabled: true
   AppBucket:
     Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'AES256'
 # These output values will be available to service templates to use.
 Outputs:
   TableName:
