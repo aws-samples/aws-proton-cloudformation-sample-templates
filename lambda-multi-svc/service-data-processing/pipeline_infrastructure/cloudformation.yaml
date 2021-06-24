@@ -2,6 +2,13 @@ Resources:
   FunctionBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+            SSEAlgorithm: 'AES256'
   BuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -441,6 +448,8 @@ Resources:
   PipelineArtifactsBucket:
     Type: AWS::S3::Bucket
     Properties:
+      VersioningConfiguration:
+        Status: Enabled
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
