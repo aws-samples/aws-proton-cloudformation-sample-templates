@@ -208,5 +208,5 @@ Wait for the service to successfully deploy. Use this command to check for deplo
 ```
 aws proton get-service \
   --region us-west-2 \
-  --service-name "front-end"
+  --name "front-end"
 ```
