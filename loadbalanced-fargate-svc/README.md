@@ -15,9 +15,10 @@ You can register and deploy these templates by using the AWS Proton console. To 
 
 ## Prerequisites
 
-First, make sure you have the AWS CLI installed, and configured. Run the following command to set an environment variable with your account ID:
+First, make sure you have the AWS CLI installed, and configured. Run the following command to set the AWS region and an `account_id` environment variable:
 
 ```bash
+export AWS_DEFAULT_REGION=us-west-2
 account_id=`aws sts get-caller-identity --query Account --output text`
 ```
 
@@ -29,7 +30,6 @@ Create the S3 bucket to store your templates:
 
 ```
 aws s3api create-bucket \
-  --region us-west-2 \
   --bucket "proton-cli-templates-${account_id}" \
   --create-bucket-configuration LocationConstraint=us-west-2
 ```
@@ -50,7 +50,6 @@ Then, allow Proton to use that role to provision resources for your services' co
 
 ```
 aws proton update-account-settings \
-  --region us-west-2 \
   --pipeline-service-role-arn "arn:aws:iam::${account_id}:role/ProtonServiceRole"
 ```
 
@@ -68,7 +67,6 @@ First, create an environment template, which will contain all of the environment
 
 ```
 aws proton create-environment-template \
-  --region us-west-2 \
   --name "public-vpc" \
   --display-name "PublicVPC" \
   --description "VPC with Public Access and ECS Cluster"
@@ -79,22 +77,20 @@ Now create a version which contains the contents of the sample environment templ
 ```
 tar -zcvf env-template.tar.gz environment/
 
-aws s3 cp env-template.tar.gz s3://proton-cli-templates-${account_id}/env-template.tar.gz --region us-west-2
+aws s3 cp env-template.tar.gz s3://proton-cli-templates-${account_id}/env-template.tar.gz
 
 rm env-template.tar.gz
 
 aws proton create-environment-template-version \
-  --region us-west-2 \
   --template-name "public-vpc" \
   --description "Version 2" \
   --source s3="{bucket=proton-cli-templates-${account_id},key=env-template.tar.gz}"
 ```
 
-Wait for the environment template version to be successfully registered. Use this command to check for registration status:
+Wait for the environment template version to be successfully registered:
 
 ```
-aws proton get-environment-template-version \
-  --region us-west-2 \
+aws proton wait environment-template-version-registered \
   --template-name "public-vpc" \
   --major-version "1" \
   --minor-version "0"
@@ -104,7 +100,6 @@ You can now publish the environment template version, making it available for us
 
 ```
 aws proton update-environment-template-version \
-  --region us-west-2 \
   --template-name "public-vpc" \
   --major-version "1" \
   --minor-version "0" \
@@ -119,7 +114,6 @@ First, create the service template.
 
 ```
 aws proton create-service-template \
-  --region us-west-2 \
   --name "lb-fargate-service" \
   --display-name "LoadbalancedFargateService" \
   --description "Fargate Service with an Application Load Balancer"
@@ -135,18 +129,16 @@ aws s3 cp svc-template.tar.gz s3://proton-cli-templates-${account_id}/svc-templa
 rm svc-template.tar.gz
 
 aws proton create-service-template-version \
-  --region us-west-2 \
   --template-name "lb-fargate-service" \
   --description "Version 1" \
   --source s3="{bucket=proton-cli-templates-${account_id},key=svc-template.tar.gz}" \
   --compatible-environment-templates '[{"templateName":"public-vpc","majorVersion":"1"}]'
 ```
 
-Wait for the service template to be successfully registered. Use this command to check for registration status:
+Wait for the service template to be successfully registered:
 
 ```
-aws proton get-service-template-version \
-  --region us-west-2 \
+aws proton wait service-template-version-registered \
   --template-name "lb-fargate-service" \
   --major-version "1" \
   --minor-version "0"
@@ -156,7 +148,6 @@ You can now publish the service template version, making it available for users 
 
 ```
 aws proton update-service-template-version \
-  --region us-west-2 \
   --template-name "lb-fargate-service" \
   --major-version "1" \
   --minor-version "0" \
@@ -171,7 +162,6 @@ First, deploy a Proton environment. This command reads your environment spec at 
 
 ```
 aws proton create-environment \
-  --region us-west-2 \
   --name "Beta" \
   --template-name public-vpc \
   --template-major-version 1 \
@@ -179,12 +169,10 @@ aws proton create-environment \
   --spec file://specs/env-spec.yaml
 ```
 
-Wait for the environment to successfully deploy. Use this command to check for deployment status:
+Wait for the environment to successfully deploy:
 
 ```
-aws proton get-environment \
-  --region us-west-2 \
-  --name "Beta"
+aws proton wait environment-deployed --name Beta
 ```
 
 Then, create a Proton service and deploy it into your Proton environment.  This command reads your service spec at `specs/svc-spec.yaml`, merges it with the service template created above, and deploys the resources in CloudFormation stacks in your AWS account using the Proton service role.  The service will provision a load-balanced ECS service running on Fargate and a CodePipeline pipeline to deploy your application code.
@@ -193,7 +181,6 @@ Fill in your CodeStar Connections connection ID and your source code repository 
 
 ```
 aws proton create-service \
-  --region us-west-2 \
   --name "front-end" \
   --repository-connection-arn arn:aws:codestar-connections:us-west-2:${account_id}:connection/<your-codestar-connection-id> \
   --repository-id "<your-source-repo-account>/<your-repository-name>" \
@@ -203,10 +190,12 @@ aws proton create-service \
   --spec file://specs/svc-spec.yaml
 ```
 
-Wait for the service to successfully deploy. Use this command to check for deployment status:
+Wait for the service to successfully deploy:
 
 ```
-aws proton get-service \
-  --region us-west-2 \
-  --name "front-end"
+aws proton wait service-created --name front-end
+```
+
+```
+aws proton get-service --name front-end
 ```
