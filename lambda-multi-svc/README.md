@@ -175,6 +175,8 @@ Repeat all of the steps above but change template-name to `data-processing-servi
 
 With the registered and published environment and service templates, you can now instantiate a Proton environment and service from the templates.
 
+### Deploy An Environment  
+
 First, deploy a Proton environment. This command reads your environment spec at `specs/env-spec.yaml`, merges it with the environment template created above, and deploys the resources in a CloudFormation stack in your AWS account using the Proton service role.
 
 ```bash
@@ -194,7 +196,10 @@ aws proton get-environment \
   --region us-west-2 \
   --name "multi-svc-beta"
 ```
+### Set up the CI/CD Roles for Proton
+Proton needs to make calls to AWS services like CloudFormationo on your behalf.  Use these instructions to create [service roles](https://docs.aws.amazon.com/proton/latest/adminguide/ag-setting-up-iam.html#setting-up-cicd). 
 
+### Deploy a Service
 Then, create a Proton service and deploy it into your Proton environment.  This command reads your service spec at `specs/svc-spec.yaml`, merges it with the service template created above, and deploys the resources in CloudFormation stacks in your AWS account using the Proton service role.  The service will provision a Lambda-based CRUD API endpoint and a CodePipeline pipeline to deploy your application code.
 
 Fill in your CodeStar Connections connection ID and your source code repository details in this command.
