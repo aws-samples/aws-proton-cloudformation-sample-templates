@@ -11,7 +11,8 @@ Developers provisioning their services can configure the following properties th
 If you need application code to run in the services:
 
 * For the crud service: https://github.com/aws-samples/aws-proton-sample-lambda-crud-service
-* For the data processing service: https://github.com/aws-samples/aws-proton-sample-lambda-data-processing
+* For the data processing service: https://github.com/aws-samples/aws-proton-sample-lambda-data-processing-service
+
 
 # Registering and deploying these templates
 
