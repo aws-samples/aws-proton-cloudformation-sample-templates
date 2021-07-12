@@ -11,7 +11,8 @@ Developers provisioning their services can configure the following properties th
 If you need application code to run in the services:
 
 * For the crud service: https://github.com/aws-samples/aws-proton-sample-lambda-crud-service
-* For the data processing service: https://github.com/aws-samples/aws-proton-sample-lambda-data-processing
+* For the data processing service: https://github.com/aws-samples/aws-proton-sample-lambda-data-processing-service
+
 
 # Registering and deploying these templates
 
@@ -39,6 +40,7 @@ aws s3api create-bucket \
 ```
 
 Create the IAM role that Proton will assume to provision resources and manage AWS CloudFormation stacks in your AWS account.
+This can also be done from the console. https://docs.aws.amazon.com/proton/latest/adminguide/ag-setting-up-iam.html#setting-up-cicd 
 
 ```bash
 aws iam create-role \
