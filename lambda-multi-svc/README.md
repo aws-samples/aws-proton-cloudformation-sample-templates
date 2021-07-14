@@ -173,9 +173,17 @@ aws proton update-service-template-version \
 
 Repeat all of the steps above but change template-name to `data-processing-service` (or whatever you want to call it) and create a tar by running `tar -zcvf svc-data-processing-template.tar.gz service-data-processing/`.
 
-## Deploy An Environment and Service
+## Deploy An Environment
 
-With the registered and published environment and service templates, you can now instantiate a Proton environment and service from the templates.
+With the registered and published environment template, you can now instantiate a Proton environment from the template.
+
+You can use two different environment provisioning methods when you create environments.
+
+* Create, manage and provision an environment in a single account.
+
+* In a single management account create and manage an environment that is provisioned in another account with environment account connections. For more information, see [Create an environment in one account and provision in another account](https://docs.aws.amazon.com/proton/latest/adminguide/ag-create-env.html#ag-create-env-deploy-other) and [Environment account connections](https://docs.aws.amazon.com/proton/latest/adminguide/ag-env-account-connections.html).
+
+### Create and Provision Environment in a single account
 
 First, deploy a Proton environment. This command reads your environment spec at `specs/env-spec.yaml`, merges it with the environment template created above, and deploys the resources in a CloudFormation stack in your AWS account using the Proton service role.
 
@@ -189,15 +197,85 @@ aws proton create-environment \
   --spec file://specs/env-spec.yaml
 ```
 
-Wait for the environment to successfully deploy. Use this call to check for deployment status:
+Wait for the environment to successfully deploy. Use the `get` call to check for deployment status:
 
 ```bash
+aws proton wait environment-deployed \
+  --region us-west-2 \
+  --name "multi-svc-beta"
+  
 aws proton get-environment \
   --region us-west-2 \
   --name "multi-svc-beta"
 ```
 
-Then, create a Proton service and deploy it into your Proton environment.  This command reads your service spec at `specs/svc-spec.yaml`, merges it with the service template created above, and deploys the resources in CloudFormation stacks in your AWS account using the Proton service role.  The service will provision a Lambda-based CRUD API endpoint and a CodePipeline pipeline to deploy your application code.
+### Create Environment in one account and Provision in another account
+
+First, log into the environment account where you want to provision the environment resources and create the IAM role that Proton will assume to provision resources and manage AWS CloudFormation stacks in your AWS account.
+This can also be done from the console. https://docs.aws.amazon.com/proton/latest/adminguide/security_iam_service-role-policy-examples.html#proton-svc-role
+
+```bash
+aws iam create-role \
+  --role-name ProtonServiceRole \
+  --assume-role-policy-document file://./policies/proton-service-assume-policy.json
+
+aws iam attach-role-policy \
+  --role-name ProtonServiceRole \
+  --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+```
+
+Then, create and send an environment account connection request to your management account. When the request is accepted, AWS Proton can use the associated IAM role that permits environment resource provisioning in the associated environment account. 
+You need to specify the environment name that you will use for the environment.
+
+```bash
+aws proton create-environment-account-connection \
+  --region us-west-2 \
+  --management-account-id ${management_account_id} \
+  --environment-name "multi-svc-beta" \
+  --role-arn arn:aws:iam::${environment_account_id}:role/ProtonServiceRole
+```
+
+Log into the management account and accept the environment account connection request from your environment account. This can also be done from the console. 
+
+```bash
+aws proton accept-environment-account-connection \
+  --region us-west-2 \
+  --id ${environment_account_connection_id}
+```
+
+Then, create a Proton environment. This command reads your environment spec at `specs/env-spec.yaml`, merges it with the environment template created above, and deploys the resources in a CloudFormation stack in your environment AWS account using the Proton service role attached to the environment account connection.
+
+```bash
+aws proton create-environment \
+  --region us-west-2 \
+  --name "multi-svc-beta" \
+  --template-name multi-svc-env \
+  --template-major-version 1 \
+  --environment-account-connection-id ${environment_account_connection_id} \
+  --spec file://specs/env-spec.yaml
+```
+
+Wait for the environment to successfully deploy. Use the `get` call to check for deployment status:
+
+```bash
+aws proton wait environment-deployed \
+  --region us-west-2 \
+  --name "multi-svc-beta"
+  
+aws proton get-environment \
+  --region us-west-2 \
+  --name "multi-svc-beta"
+```
+
+## Deploy A Service
+
+With the registered and published service template and deployed environment, you can now create a Proton service and deploy it into your Proton environment.
+
+This command reads your service spec at `specs/svc-spec.yaml`, merges it with the service template created above, and deploys the resources in CloudFormation stacks in the AWS account of the environment.  
+The service will provision a Lambda-based CRUD API endpoint and a CodePipeline pipeline to deploy your application code.
+
+If you are deploying the service in a cross account environment, you need to enter the environment AWS account id(s) in `specs/svc-spec.yaml` `pipeline: environment_account_ids`. 
+This allows environment accounts to get the function artifacts from S3 Bucket in the management account.
 
 Fill in your CodeStar Connections connection ID and your source code repository details in this command.
 
@@ -216,6 +294,10 @@ aws proton create-service \
 Wait for the service to successfully deploy. Use this call to check for deployment status:
 
 ```bash
+aws proton wait service-created \
+  --region us-west-2 \
+  --name "tasks-front-end"
+
 aws proton get-service \
   --region us-west-2 \
   --name "tasks-front-end"
