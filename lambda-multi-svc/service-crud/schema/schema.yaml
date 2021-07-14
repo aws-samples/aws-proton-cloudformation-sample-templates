@@ -60,4 +60,12 @@ schema:
           default: "make publish"
           minLength: 1
           maxLength: 200
+        environment_account_ids:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+          description: "The environment account ids for service instances using cross account environment"
+          default: []
+          maxItems: 10
 
