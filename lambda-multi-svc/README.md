@@ -96,9 +96,15 @@ aws proton create-environment-template-version \
   --source s3="{bucket=proton-cli-templates-${account_id},key=env-template.tar.gz}"
 ```
 
-Wait for the environment template version to be successfully registered. You can try this command to see the registration status
+Wait for the environment template version to be successfully registered. You can use this command to see the registration status
 
 ```bash
+aws proton wait environment-template-version-registered \
+  --region us-west-2 \
+  --template-name "multi-svc-env" \
+  --major-version "1" \
+  --minor-version "0"
+  
 aws proton get-environment-template-version \
   --region us-west-2 \
   --template-name "multi-svc-env" \
@@ -148,9 +154,15 @@ aws proton create-service-template-version \
   --compatible-environment-templates '[{"templateName":"multi-svc-env","majorVersion":"1"}]'
 ```
 
-Wait for the service template version to be successfully registered. You can try this command to see the registration status
+Wait for the service template version to be successfully registered. You can use this command to see the registration status
 
 ```bash
+aws proton wait service-template-version-registered \
+  --region us-west-2 \
+  --template-name "crud-api-service" \
+  --major-version "1" \
+  --minor-version "0"
+  
 aws proton get-service-template-version \
   --region us-west-2 \
   --template-name "crud-api-service" \
@@ -274,8 +286,8 @@ With the registered and published service template and deployed environment, you
 This command reads your service spec at `specs/svc-spec.yaml`, merges it with the service template created above, and deploys the resources in CloudFormation stacks in the AWS account of the environment.  
 The service will provision a Lambda-based CRUD API endpoint and a CodePipeline pipeline to deploy your application code.
 
-If you are deploying the service in a cross account environment, you need to enter the environment AWS account id(s) in `specs/svc-spec.yaml` `pipeline: environment_account_ids`. 
-This allows environment accounts to get the function artifacts from S3 Bucket in the management account.
+If you are deploying the service in a cross account environment, you need to enter the environment AWS account id(s) in `specs/svc-spec.yaml` `pipeline: environment_account_ids`, for example "111222333444,222333444555".
+This gives environment accounts permission to get the function artifacts from S3 Bucket in the management account.
 
 Fill in your CodeStar Connections connection ID and your source code repository details in this command.
 

@@ -28,7 +28,8 @@ Resources:
                 - /*
             Principal:
               AWS:
-                {% for environment_account_id in pipeline.inputs.environment_account_ids %}
+                {% set environment_account_ids = pipeline.inputs.environment_account_ids.split(',') %}
+                {% for environment_account_id in environment_account_ids %}
                 - "arn:aws:iam::{{environment_account_id}}:root"
                 {% endfor %}
   {% endif %}
