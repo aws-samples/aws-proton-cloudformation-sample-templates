@@ -2,6 +2,7 @@ proton: ServiceSpec
 
 pipeline:
   unit_test_command: "ls"
+  environment_account_ids: ""
 
 instances:
   - name: "frontend-dev"
