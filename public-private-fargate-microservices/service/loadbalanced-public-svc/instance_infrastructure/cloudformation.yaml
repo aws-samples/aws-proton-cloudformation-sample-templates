@@ -31,8 +31,6 @@ Resources:
         DnsRecords:
           - TTL: 60
             Type: A
-          - TTL: 60
-            Type: SRV
       HealthCheckCustomConfig:
         FailureThreshold: 1
       Name: '{{service_instance.inputs.service_discovery_name}}'
@@ -99,7 +97,6 @@ Resources:
       TaskDefinition: !Ref 'TaskDefinition'
       ServiceRegistries:
       - RegistryArn: !GetAtt DiscoveryService.Arn
-        Port: 80
       LoadBalancers:
         - ContainerName: '{{service_instance.name}}'
           ContainerPort: '{{service_instance.inputs.port}}'
