@@ -220,13 +220,13 @@ aws proton create-environment-account-connection \
   --management-account-id ${account_id} \
   --environment-name "Beta" \
   --role-arn arn:aws:iam::${environment_account_id}:role/ProtonServiceRole
+  
+environment_account_connection_id=`replace_with_the_environment_account_connection_id_returned_above`
 ```
 
 Log into the management account and accept the environment account connection request from your environment account. This can also be done from the console.
 
 ```bash
-environment_account_connection_id=`replace_with_the_environment_account_connection_id_returned_above`
-
 aws proton accept-environment-account-connection --id ${environment_account_connection_id}
 ```
 
@@ -257,7 +257,7 @@ This command reads your service spec at `specs/svc-spec.yaml`, merges it with th
 The service will provision a Lambda-based CRUD API endpoint and a CodePipeline pipeline to deploy your application code.
 
 If you are deploying the service in a cross account environment, you need to enter the environment AWS account id(s) in `specs/svc-spec.yaml` `pipeline: environment_account_ids`, for example "111222333444,222333444555".
-This gives environment accounts permission to get the function artifacts from S3 Bucket in the management account.
+This gives environment accounts permissions to get the images from ECR repository in the management account.
 
 Fill in your CodeStar Connections connection ID and your source code repository details in this command.
 

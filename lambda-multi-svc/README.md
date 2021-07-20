@@ -227,6 +227,8 @@ First, log into the environment account where you want to provision the environm
 This can also be done from the console. https://docs.aws.amazon.com/proton/latest/adminguide/security_iam_service-role-policy-examples.html#proton-svc-role
 
 ```bash
+environment_account_id=`your_environment_account_id`
+
 aws iam create-role \
   --role-name ProtonServiceRole \
   --assume-role-policy-document file://./policies/proton-service-assume-policy.json
@@ -242,9 +244,11 @@ You need to specify the environment name that you will use for the environment.
 ```bash
 aws proton create-environment-account-connection \
   --region us-west-2 \
-  --management-account-id ${management_account_id} \
+  --management-account-id ${account_id} \
   --environment-name "multi-svc-beta" \
   --role-arn arn:aws:iam::${environment_account_id}:role/ProtonServiceRole
+  
+environment_account_connection_id=`replace_with_the_environment_account_connection_id_returned_above`
 ```
 
 Log into the management account and accept the environment account connection request from your environment account. This can also be done from the console. 
