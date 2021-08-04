@@ -97,7 +97,7 @@ Resources:
       # reached by using either {{service.name}}, {{service_instance.name}}
       # or a combination of both as we're doing here, so we truncate the name to 29 characters
       # plus an ellipsis different from '...' or '---' to avoid running into errors.
-      Name: '{{(service.name~"--"~service_instance.name)|truncate(29, true, 'zzz')}}'
+      Name: '{{(service.name~"--"~service_instance.name)|truncate(29, true, 'zzz', 0)}}'
       Port: '{{service_instance.inputs.port}}'
       Protocol: HTTP
       UnhealthyThresholdCount: 2
