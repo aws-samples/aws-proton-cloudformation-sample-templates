@@ -1,6 +1,6 @@
 ## IMPORTANT
 
-Proton is making breaking API changes strating in 5/21/2021 in preparation for launching into the SDK.  For more information, visit our [migration guide](https://docs.aws.amazon.com/proton/latest/adminguide/ga-api-migration.html).  If possible, we recommend using the console, which won't have a disruption in service, or wait until we launch in the SDK.
+Proton is making breaking API changes starting in 5/21/2021 in preparation for launching into the SDK.  For more information, visit our [migration guide](https://docs.aws.amazon.com/proton/latest/adminguide/ga-api-migration.html).  If possible, we recommend using the console, which won't have a disruption in service, or wait until we launch in the SDK.
 
 If you want to keep using the CLI, at some point it will stop working.  The instructions on this branch have been updated to include the API changes, which are detailed in the [migration guide](https://docs.aws.amazon.com/proton/latest/adminguide/ga-api-migration.html).
 
