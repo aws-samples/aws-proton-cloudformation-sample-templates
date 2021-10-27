@@ -60,10 +60,3 @@ schema:
           default: "make publish"
           minLength: 1
           maxLength: 200
-        environment_account_ids:
-          type: string
-          pattern: '^$|^\d{12}(,\d{12})*$'
-          description: "The environment account ids for service instances using cross account environment, separated by ,"
-          default: ""
-          maxLength: 200
-

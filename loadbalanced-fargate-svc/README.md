@@ -256,9 +256,6 @@ With the registered and published service template and deployed environment, you
 This command reads your service spec at `specs/svc-spec.yaml`, merges it with the service template created above, and deploys the resources in CloudFormation stacks in the AWS account of the environment.  
 The service will provision a Lambda-based CRUD API endpoint and a CodePipeline pipeline to deploy your application code.
 
-If you are deploying the service in a cross account environment, you need to enter the environment AWS account id(s) in `specs/svc-spec.yaml` `pipeline: environment_account_ids`, for example "111222333444,222333444555".
-This gives environment accounts permissions to get the images from ECR repository in the management account.
-
 Fill in your CodeStar Connections connection ID and your source code repository details in this command.
 
 ```bash
