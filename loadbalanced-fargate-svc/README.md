@@ -1,5 +1,5 @@
 # AWS Proton Sample Load-Balanced Web Service Using Amazon ECS and AWS Fargate
-
+ 
 This directory contains sample AWS Proton Environment and Service templates for an Amazon ECS load-balanced service running on AWS Fargate, as well as sample specs for creating Proton Environments and Services using the templates. The environment template contains an ECS Cluster and a VPC with two public subnets. The service template contains all the resources required to create an ECS Fargate service behind a load balancer in that environment, as well as sample specs for creating Proton Environments and Services using the templates.
 
 Developers provisioning their services can configure the following properties through their service spec:
