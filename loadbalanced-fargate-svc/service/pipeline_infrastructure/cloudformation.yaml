@@ -594,7 +594,8 @@ Resources:
                   - PipelineBuildCodePipelineActionRole
                   - Arn
               RunOrder: 1
-          Name: Build {%- for service_instance in service_instances %}
+          Name: Build 
+{%- for service_instance in service_instances %}
         - Actions:
             - ActionTypeId:
                 Category: Build
@@ -612,7 +613,7 @@ Resources:
                   - PipelineDeployCodePipelineActionRole
                   - Arn
               RunOrder: 1
-          Name: 'Deploy{{service_instance.name}}'
+          Name: 'Deploy-{{service_instance.name}}'
 {%- endfor %}
       ArtifactStore:
         EncryptionKey:
