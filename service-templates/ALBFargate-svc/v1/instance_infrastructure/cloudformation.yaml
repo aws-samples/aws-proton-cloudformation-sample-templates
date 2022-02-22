@@ -82,7 +82,7 @@ Resources:
               awslogs-group: !Ref ServiceTaskDefwebLogGroup
               awslogs-stream-prefix: '{{service.name}}/{{service_instance.name}}'
               awslogs-region: !Ref 'AWS::Region'
-          name: '{{service_instance.name}}'
+          Name: '{{service_instance.name}}'
           PortMappings:
             - ContainerPort: 80
               Protocol: tcp
