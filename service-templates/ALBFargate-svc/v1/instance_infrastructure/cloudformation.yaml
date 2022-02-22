@@ -157,7 +157,7 @@ Resources:
         - CidrIp: 0.0.0.0/0
           Description: Allow all outbound traffic by default
           IpProtocol: '-1'
-      VpcId: !Ref VPC
+      VpcId: {{environment.outputs.VPC}}
   ServiceSecurityGroupfromServiceLBSecurityGroup:
     Type: 'AWS::EC2::SecurityGroupIngress'
     Properties:
