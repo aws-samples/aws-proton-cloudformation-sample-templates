@@ -157,7 +157,7 @@ Resources:
         - CidrIp: 0.0.0.0/0
           Description: Allow all outbound traffic by default
           IpProtocol: '-1'
-      VpcId: {{environment.outputs.VPC}}
+      VpcId: '{{environment.outputs.VPC}}'
   ServiceSecurityGroupfromServiceLBSecurityGroup:
     Type: 'AWS::EC2::SecurityGroupIngress'
     Properties:
@@ -173,13 +173,14 @@ Resources:
       ToPort: 80
   ServiceTaskCountTarget:
     Type: 'AWS::ApplicationAutoScaling::ScalableTarget'
+    DependsOn: Service
     Properties:
       MaxCapacity: 10
       MinCapacity: 1
       ResourceId: !Join 
         - ''
         - - service/
-          - {{environment.outputs.Cluster}}
+          - '{{environment.outputs.Cluster}}'
           - /
           - '{{service.name}}_{{service_instance.name}}'
       RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
