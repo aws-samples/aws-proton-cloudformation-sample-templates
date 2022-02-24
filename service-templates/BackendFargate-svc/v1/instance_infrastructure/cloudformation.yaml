@@ -132,10 +132,3 @@ Resources:
           PredefinedMetricType: ECSServiceAverageMemoryUtilization
         TargetValue: 50
 Outputs:
-  ServiceURL:
-    Value: !Join 
-      - ''
-      - - 'http://'
-        - !GetAtt 
-          - ServiceLB
-          - DNSName
