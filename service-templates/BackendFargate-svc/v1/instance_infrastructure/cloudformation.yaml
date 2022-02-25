@@ -56,9 +56,6 @@ Resources:
       EnableECSManagedTags: false
       HealthCheckGracePeriodSeconds: 60
       LaunchType: FARGATE
-      LoadBalancers:
-        - ContainerName: '{{service_instance.name}}'
-          ContainerPort: 80
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
