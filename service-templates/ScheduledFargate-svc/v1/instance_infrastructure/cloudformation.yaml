@@ -1,0 +1,115 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy a service on AWS Fargate, hosted in a public/private subnet, and accessible via a public load balancer.
+
+Resources:
+  ScheduledFargateTaskScheduledEventRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      ScheduleExpression: rate(5 minutes)
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt 
+            - '{{environment.outputs.Cluster}}'
+            - Arn
+          EcsParameters:
+            LaunchType: FARGATE
+            NetworkConfiguration:
+              AwsVpcConfiguration:
+                AssignPublicIp: DISABLED
+                SecurityGroups:
+                  - !GetAtt 
+                    - ScheduledFargateTaskScheduledTaskDefSecurityGroup
+                    - GroupId
+                Subnets:
+                  - '{{environment.outputs.PrivateSubnet1}}'
+                  - '{{environment.outputs.PrivateSubnet2}}'
+            TaskCount: 1
+            TaskDefinitionArn: !Ref ScheduledFargateTaskScheduledTaskDef
+          Id: Target0
+          Input: '{}'
+          RoleArn: !GetAtt 
+            - ScheduledFargateTaskScheduledTaskDefEventsRole
+            - Arn
+  ScheduledFargateTaskScheduledTaskDefTaskRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: 2012-10-17
+  ScheduledFargateTaskScheduledTaskDef:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Essential: true
+          Image: '{{service_instance.inputs.image}}'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref ScheduledTaskDefLogGroup
+              awslogs-stream-prefix: '{{service.name}}/{{service_instance.name}}'
+              awslogs-region: !Ref 'AWS::Region'
+          Name: '{{service_instance.name}}'
+      Cpu: '256'
+      ExecutionRoleArn: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
+      Family: '{{service.name}}_{{service_instance.name}}'
+      Memory: '512'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      TaskRoleArn: !GetAtt 
+        - ScheduledFargateTaskScheduledTaskDefTaskRole
+        - Arn
+  ScheduledTaskDefLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties:
+      LogGroupName: '{{service.name}}/{{service_instance.name}}'
+  ScheduledFargateTaskScheduledTaskDefEventsRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+        Version: 2012-10-17
+  ScheduledFargateTaskScheduledTaskDefEventsRoleDefaultPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: 'ecs:RunTask'
+            Condition:
+              ArnEquals:
+                'ecs:cluster': !GetAtt 
+                  - '{{environment.outputs.Cluster}}'
+                  - Arn
+            Effect: Allow
+            Resource: !Ref ScheduledFargateTaskScheduledTaskDef
+          - Action: 'iam:PassRole'
+            Effect: Allow
+            Resource: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
+          - Action: 'iam:PassRole'
+            Effect: Allow
+            Resource: !GetAtt 
+              - ScheduledFargateTaskScheduledTaskDefTaskRole
+              - Arn
+        Version: 2012-10-17
+      PolicyName: ScheduledFargateTaskScheduledTaskDefEventsRoleDefaultPolicy
+      Roles:
+        - !Ref ScheduledFargateTaskScheduledTaskDefEventsRole
+  ScheduledFargateTaskScheduledTaskDefSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Automatically created Security Group for Scheduled Task
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: '-1'
+      VpcId: '{{environment.outputs.VPC}}'
