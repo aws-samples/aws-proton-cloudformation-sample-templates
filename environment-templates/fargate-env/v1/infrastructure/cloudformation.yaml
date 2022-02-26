@@ -176,6 +176,9 @@ Outputs:
   Cluster:
     Description: The name of the ECS cluster
     Value: !Ref 'Cluster'
+  ClusterArn:
+    Description: The ARN of the ECS cluster
+    Value: !GetAtt 'Cluster.Arn'
   ServiceTaskDefExecutionRoleArn:
     Description: The ARN of the ECS role
     Value: !GetAtt 'ServiceTaskDefExecutionRole.Arn'
