@@ -109,7 +109,7 @@ Resources:
         - CidrIp: 0.0.0.0/0
           Description: Allow all outbound traffic by default
           IpProtocol: '-1'
-      VpcId: !Ref Vpc8378EB38
+      VpcId: '{{environment.outputs.VPC}}'
   ServiceQueueProcessingFargateServiceTaskCountTarget:
     Type: 'AWS::ApplicationAutoScaling::ScalableTarget'
     Properties:
