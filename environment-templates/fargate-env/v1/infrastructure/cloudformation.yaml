@@ -188,6 +188,12 @@ Outputs:
   PublicSubnet2:
     Description: Public subnet two
     Value: !Ref 'PublicSubnet2'
+  PrivateSubnet1:
+    Description: Private subnet one
+    Value: !Ref 'PrivateSubnet1'
+  PrivateSubnet2:
+    Description: Private subnet two
+    Value: !Ref 'PrivateSubnet2'
   CloudMapNamespaceId:
     Description: CloudMap namespace Id
     Value: !GetAtt 'CloudMapNamespace.Id'
