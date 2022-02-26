@@ -8,9 +8,7 @@ Resources:
       ScheduleExpression: rate(5 minutes)
       State: ENABLED
       Targets:
-        - Arn: !GetAtt 
-            - '{{environment.outputs.Cluster}}'
-            - Arn
+        - Arn: '{{environment.outputs.ClusterArn}}'
           EcsParameters:
             LaunchType: FARGATE
             NetworkConfiguration:
@@ -87,9 +85,7 @@ Resources:
           - Action: 'ecs:RunTask'
             Condition:
               ArnEquals:
-                'ecs:cluster': !GetAtt 
-                  - '{{environment.outputs.Cluster}}'
-                  - Arn
+                'ecs:cluster': '{{environment.outputs.ClusterArn}}'
             Effect: Allow
             Resource: !Ref ScheduledFargateTaskScheduledTaskDef
           - Action: 'iam:PassRole'
