@@ -66,7 +66,7 @@ Resources:
                     },
                     "pre_build": {
                       "commands": [
-                        "cd $CODEBUILD_SRC_DIR/'{{pipeline.inputs.service_dir}}'",
+                        "cd $CODEBUILD_SRC_DIR/{{pipeline.inputs.service_dir}}",
                         "$(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)",
                         "{{ pipeline.inputs.unit_test_command }}",
                       ]
@@ -93,7 +93,7 @@ Resources:
                   },
                   "artifacts": {
                     "files": [
-                      "rendered_service.yaml"
+                      "{{pipeline.inputs.service_dir}}/rendered_service.yaml"
                     ]
                   }
                 }
