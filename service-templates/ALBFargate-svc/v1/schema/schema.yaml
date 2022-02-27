@@ -36,10 +36,16 @@ schema:
       type: object
       description: "Pipeline input properties"
       properties:
+        service_dir:
+          type: string
+          description: "Source directory for the service"
+          default: "LBFargate-svc"
+          minLength: 1
+          maxLength: 100
         dockerfile:
           type: string
           description: "The location of the Dockerfile to build"
-          default: "LBFargate-svc/Dockerfile"
+          default: "Dockerfile"
           minLength: 1
           maxLength: 100
         unit_test_command:
