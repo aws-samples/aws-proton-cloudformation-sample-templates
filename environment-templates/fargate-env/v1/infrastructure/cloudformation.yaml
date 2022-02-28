@@ -172,6 +172,29 @@ Resources:
         Version: 2012-10-17
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+  pingSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-ping'
+      KmsMasterKeyId: 'alias/aws/sns'
+  pingSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    DependsOn: pingSNSTopic
+    Properties:
+      Topics:
+        - !Ref pingSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Action:
+              - sns:Subscribe
+            Resource: !Ref pingSNSTopic
+            Condition:
+              StringEquals:
+                "sns:Protocol": "sqs"
 Outputs:
   Cluster:
     Description: The name of the ECS cluster
@@ -182,6 +205,9 @@ Outputs:
   ServiceTaskDefExecutionRoleArn:
     Description: The ARN of the ECS role
     Value: !GetAtt 'ServiceTaskDefExecutionRole.Arn'
+  SNSTopicArn:
+    Description: The ARN of the SNS Topic
+    Value: !GetAtt 'pingSNSTopic.Arn'
   VPC:
     Description: The ID of the VPC that this stack is deployed in
     Value: !Ref 'VPC'
