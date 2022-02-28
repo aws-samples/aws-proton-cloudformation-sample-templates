@@ -70,6 +70,15 @@ Resources:
             Principal:
               Service: ecs-tasks.amazonaws.com
         Version: 2012-10-17
+      Policies:
+        - PolicyName: 'Publish2SNS'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'sns:Publish'
+                Resource:
+                  - !Ref pingSNSTopic
   ServiceTaskDef:
     Type: 'AWS::ECS::TaskDefinition'
     Properties:
@@ -86,6 +95,9 @@ Resources:
           PortMappings:
             - ContainerPort: 80
               Protocol: tcp
+          Environment:
+            - Name: SNS_TOPIC_ARN
+              Value: '{{ environment.outputs.SNSTopic}}'
       Cpu: '256'
       ExecutionRoleArn: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
       Family: '{{service.name}}_{{service_instance.name}}'
