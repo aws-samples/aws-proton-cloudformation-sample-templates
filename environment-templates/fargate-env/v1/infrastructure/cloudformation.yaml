@@ -205,9 +205,9 @@ Outputs:
   ServiceTaskDefExecutionRoleArn:
     Description: The ARN of the ECS role
     Value: !GetAtt 'ServiceTaskDefExecutionRole.Arn'
-  SNSTopicArn:
-    Description: The ARN of the SNS Topic
-    Value: !GetAtt 'pingSNSTopic.Arn'
+  SNSTopic:
+    Description: The name of the SNS Topic
+    Value: !Ref 'pingSNSTopic'
   VPC:
     Description: The ID of the VPC that this stack is deployed in
     Value: !Ref 'VPC'
