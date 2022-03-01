@@ -183,7 +183,9 @@ Resources:
     Properties:
       ComparisonOperator: LessThanOrEqualToThreshold
       EvaluationPeriods: 1
-      AlarmActions: !Ref ServiceQueueProcessingFargateServiceTaskCountTargetQueueMessagesVisibleScalingLowerPolicy
+      AlarmActions: 
+        - !Ref >-
+          ServiceQueueProcessingFargateServiceTaskCountTargetQueueMessagesVisibleScalingLowerPolicy
       AlarmDescription: Lower threshold scaling alarm
       Dimensions:
         - Name: QueueName
@@ -215,7 +217,9 @@ Resources:
     Properties:
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      AlarmActions: !Ref ServiceQueueProcessingFargateServiceTaskCountTargetQueueMessagesVisibleScalingUpperPolicy
+      AlarmActions: 
+        - !Ref >-
+          ServiceQueueProcessingFargateServiceTaskCountTargetQueueMessagesVisibleScalingUpperPolicy
       AlarmDescription: Upper threshold scaling alarm
       Dimensions:
         - Name: QueueName
