@@ -1,5 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Deploy a service on AWS Fargate, hosted in a public/private subnet, and accessible via a public load balancer.
+Description: Deploy a service on AWS Fargate, hosted in a public or private subnet, 
+             and accessible via a public load balancer.
 
 Resources:
   ServiceLB:
