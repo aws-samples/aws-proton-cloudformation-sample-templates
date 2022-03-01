@@ -113,7 +113,7 @@ Resources:
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain
     Properties:
-      LogGroupName: '{{service.name}}/{{service_instance.name}}'
+      LogGroupName: '${AWS::StackName}/{{service.name}}/{{service_instance.name}}'
   Service:
     Type: 'AWS::ECS::Service'
     Properties:
