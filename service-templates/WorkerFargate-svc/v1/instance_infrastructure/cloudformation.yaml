@@ -115,6 +115,7 @@ Resources:
     Type: 'AWS::ECS::Service'
     Properties:
       Cluster: '{{environment.outputs.Cluster}}'
+      ServiceName: '{{service.name}}_{{service_instance.name}}'
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 50
