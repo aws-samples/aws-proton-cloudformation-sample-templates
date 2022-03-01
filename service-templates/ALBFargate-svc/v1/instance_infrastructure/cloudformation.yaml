@@ -112,8 +112,6 @@ Resources:
     Type: 'AWS::Logs::LogGroup'
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain
-    Properties:
-      LogGroupName: '${AWS::StackName}/{{service.name}}/{{service_instance.name}}'
   Service:
     Type: 'AWS::ECS::Service'
     Properties:
