@@ -18,6 +18,36 @@ Resources:
         maxReceiveCount: 3
     UpdateReplacePolicy: Delete
     DeletionPolicy: Delete
+  QueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref 'ServiceEcsProcessingQueue']
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !GetAtt ServiceQueueProcessingTaskDefTaskRole.Arn
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+            Resource: !GetAtt ServiceEcsProcessingQueue.Arn
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt ServiceEcsProcessingQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: '{{environment.outputs.SNSTopic}}'
+  pingSNSTopicSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: '{{environment.outputs.SNSTopic}}'
+      Protocol: 'sqs'
+      Endpoint: !GetAtt ServiceEcsProcessingQueue.Arn
   ServiceQueueProcessingTaskDefTaskRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -56,12 +86,14 @@ Resources:
               Value: !GetAtt 
                 - ServiceEcsProcessingQueue
                 - QueueName
+            - Name: QUEUE_URI
+              Value: !Ref ServiceEcsProcessingQueue
           Essential: true
           Image: '{{service_instance.inputs.image}}'
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: ServiceQueueProcessingTaskDefLogGroup
+              awslogs-group: !Ref ServiceQueueProcessingTaskDefLogGroup
               awslogs-stream-prefix: '{{service.name}}/{{service_instance.name}}'
               awslogs-region: !Ref 'AWS::Region'
           Name: '{{service_instance.name}}'
@@ -79,8 +111,6 @@ Resources:
     Type: 'AWS::Logs::LogGroup'
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain
-    Properties:
-      LogGroupName: '{{service.name}}/{{service_instance.name}}'
   ServiceQueueProcessingFargateService:
     Type: 'AWS::ECS::Service'
     Properties:
