@@ -98,6 +98,8 @@ Resources:
           Environment:
             - Name: SNS_TOPIC_ARN
               Value: '{"ping":"{{environment.outputs.SNSTopic}}"}'
+            - Name: BACKEND_URL
+              Value: '{{service_instance.inputs.backendurl}}'
       Cpu: '256'
       ExecutionRoleArn: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
       Family: '{{service.name}}_{{service_instance.name}}'
