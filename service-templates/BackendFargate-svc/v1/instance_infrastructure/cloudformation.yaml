@@ -86,6 +86,10 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Automatically created Security Group for BackendFargate Service
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all inbound traffic by default
+          IpProtocol: '-1'
       SecurityGroupEgress:
         - CidrIp: 0.0.0.0/0
           Description: Allow all outbound traffic by default
