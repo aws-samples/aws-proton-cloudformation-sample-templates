@@ -34,7 +34,7 @@ schema:
         backendurl:
           type: string
           description: "Service discovery url of the backend service"
-          default: "BackendFargate-svc_BackendFargate-svc-prod.fargate-env:80"
+          default: "BackendFargate-svc-prod.BackendFargate-svc.fargate-prod-env.local:80"
           minLength: 1
           maxLength: 200
 
