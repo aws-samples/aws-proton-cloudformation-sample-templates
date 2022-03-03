@@ -80,7 +80,7 @@ Resources:
         RoutingPolicy: MULTIVALUE
       HealthCheckCustomConfig:
         FailureThreshold: 1
-      Name: '{{service.name}}_{{service_instance.name}}'
+      Name: '{{service_instance.name}}.{{service.name}}'
       NamespaceId: '{{environment.outputs.CloudMapNamespaceId}}'
   ServiceSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
