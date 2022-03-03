@@ -156,7 +156,7 @@ Resources:
   CloudMapNamespace:
     Type: 'AWS::ServiceDiscovery::PrivateDnsNamespace'
     Properties:
-      Name: fargate-env
+      Name: fargate-env.local
       Vpc: !Ref VPC
   Cluster:
     Type: 'AWS::ECS::Cluster'
