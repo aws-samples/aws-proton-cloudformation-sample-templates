@@ -1,6 +1,23 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Deploy a Backend service on AWS Fargate, 
-             hosted in a public or private subnet, and accessible via Service Discovery.
+Description: Deploy a Backend service on AWS Fargate, hosted in a public or private subnet, 
+and accessible via Service Discovery.
+Mappings:
+  TaskSize:
+    x-small:
+      cpu: 256
+      memory: 512
+    small:
+      cpu: 512
+      memory: 1024
+    medium:
+      cpu: 1024
+      memory: 2048
+    large:
+      cpu: 2048
+      memory: 4096
+    x-large:
+      cpu: 4096
+      memory: 8192
 
 Resources:
   ServiceTaskDefTaskRole:
@@ -13,6 +30,14 @@ Resources:
             Principal:
               Service: ecs-tasks.amazonaws.com
         Version: 2012-10-17
+      Policies:
+        - PolicyName: 'Publish2SNS'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'sns:Publish'
+                Resource: '{{environment.outputs.SNSTopic}}'
   ServiceTaskDef:
     Type: 'AWS::ECS::TaskDefinition'
     Properties:
@@ -27,12 +52,15 @@ Resources:
               awslogs-region: !Ref 'AWS::Region'
           Name: '{{service_instance.name}}'
           PortMappings:
-            - ContainerPort: 80
+            - ContainerPort: '{{service_instance.inputs.port}}'
               Protocol: tcp
-      Cpu: '256'
+          Environment:
+            - Name: SNS_TOPIC_ARN
+              Value: '{"ping":"{{environment.outputs.SNSTopic}}"}'
+      Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
       ExecutionRoleArn: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
       Family: '{{service.name}}_{{service_instance.name}}'
-      Memory: '512'
+      Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
@@ -51,19 +79,28 @@ Resources:
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 50
-      DesiredCount: 1
+      DesiredCount: '{{service_instance.inputs.desired_count}}'
       EnableECSManagedTags: false
       LaunchType: FARGATE
       NetworkConfiguration:
         AwsvpcConfiguration:
+        {% if service_instance.inputs.subnet_type == 'private' %}
+          AssignPublicIp: DISABLED
+        {% else %}
           AssignPublicIp: ENABLED
+        {% endif %}
           SecurityGroups:
             - !GetAtt 
               - ServiceSecurityGroup
               - GroupId
           Subnets:
+          {% if service_instance.inputs.subnet_type == 'private' %}
+            - '{{environment.outputs.PrivateSubnet1}}'
+            - '{{environment.outputs.PrivateSubnet2}}'
+          {% else %}
             - '{{environment.outputs.PublicSubnet1}}'
             - '{{environment.outputs.PublicSubnet2}}'
+          {% endif %}
       ServiceRegistries:
         - RegistryArn: !GetAtt 
             - ServiceCloudmapService
@@ -85,7 +122,7 @@ Resources:
   ServiceSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: Automatically created Security Group for BackendFargate Service
+      GroupDescription: Automatically created Security Group for the Service
       SecurityGroupIngress:
         - CidrIp: 0.0.0.0/0
           Description: Allow all inbound traffic by default
