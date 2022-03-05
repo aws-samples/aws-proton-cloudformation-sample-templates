@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Deploy a Backend service on AWS Fargate, hosted in a public or private subnet, 
-and accessible via Service Discovery.
+             and accessible via Service Discovery.
 Mappings:
   TaskSize:
     x-small:
