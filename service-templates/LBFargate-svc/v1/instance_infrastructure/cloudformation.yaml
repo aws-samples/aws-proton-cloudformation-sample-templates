@@ -175,7 +175,7 @@ Resources:
           Subnets:
           {% if service_instance.inputs.subnet_type == 'private' %}
             - '{{environment.outputs.PrivateSubnet1}}'
-            - '{{environment.outputs.PrivateSubnet2}}'	  
+            - '{{environment.outputs.PrivateSubnet2}}'
           {% else %}
             - '{{environment.outputs.PublicSubnet1}}'
             - '{{environment.outputs.PublicSubnet2}}'
