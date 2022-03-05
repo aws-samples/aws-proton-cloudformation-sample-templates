@@ -27,16 +27,13 @@ Resources:
         - Key: deletion_protection.enabled
           Value: 'false'
       Scheme: internet-facing
-      {% if service_instance.inputs.loadbalancer_type == 'application' %}
       SecurityGroups:
         - !GetAtt 
           - ServiceLBSecurityGroup
           - GroupId
-      {% endif %}
       Subnets:
         - '{{environment.outputs.PublicSubnet1}}'
         - '{{environment.outputs.PublicSubnet2}}'
-      {% if service_instance.inputs.loadbalancer_type == 'application' %}
       Type: application
   ServiceLBSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
@@ -62,9 +59,6 @@ Resources:
         - GroupId
       FromPort: 80
       ToPort: 80
-      {% else %}
-      Type: network
-      {% endif %}           
   ServiceLBPublicListener:
     Type: 'AWS::ElasticLoadBalancingV2::Listener'
     Properties:
@@ -73,23 +67,15 @@ Resources:
           Type: forward
       LoadBalancerArn: !Ref ServiceLB
       Port: 80
-      {% if service_instance.inputs.loadbalancer_type == 'application' %}
       Protocol: HTTP
-      {% else %}
-      Protocol: TCP
-      {% endif %}              
   ServiceLBPublicListenerECSGroup:
     Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
     Properties:
       Port: '{{service_instance.inputs.port}}'
-      {% if service_instance.inputs.loadbalancer_type == 'application' %}
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: stickiness.enabled
           Value: 'false'
-      {% else %}
-      Protocol: TCP
-      {% endif %}              
       TargetType: ip
       VpcId: '{{environment.outputs.VPC}}'
   ServiceTaskDefTaskRole:
@@ -163,23 +149,14 @@ Resources:
           TargetGroupArn: !Ref ServiceLBPublicListenerECSGroup
       NetworkConfiguration:
         AwsvpcConfiguration:
-	{% if service_instance.inputs.subnet_type == 'private' %}
-          AssignPublicIp: DISABLED
-	{% else %}
           AssignPublicIp: ENABLED
-	{% endif %}
           SecurityGroups:
             - !GetAtt 
               - ServiceSecurityGroup
               - GroupId
           Subnets:
-	  {% if service_instance.inputs.subnet_type == 'private' %}
-            - '{{environment.outputs.PrivateSubnet1}}'
-            - '{{environment.outputs.PrivateSubnet2}}'	  
-	  {% else %}
             - '{{environment.outputs.PublicSubnet1}}'
             - '{{environment.outputs.PublicSubnet2}}'
-	  {% endif %}
       ServiceRegistries:
         - RegistryArn: !GetAtt 
             - ServiceCloudmapService
@@ -204,19 +181,12 @@ Resources:
   ServiceSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: Automatically created Security Group for the Service
-      {% if service_instance.inputs.loadbalancer_type == 'network' %}
-      SecurityGroupIngress:
-        - CidrIp: 0.0.0.0/0
-          Description: Allow all inbound traffic by default
-          IpProtocol: '-1'
-      {% endif %}
+      GroupDescription: Automatically created Security Group for ALBFargate Service
       SecurityGroupEgress:
         - CidrIp: 0.0.0.0/0
           Description: Allow all outbound traffic by default
           IpProtocol: '-1'
       VpcId: '{{environment.outputs.VPC}}'
-  {% if service_instance.inputs.loadbalancer_type == 'application' %}
   ServiceSecurityGroupfromServiceLBSecurityGroup:
     Type: 'AWS::EC2::SecurityGroupIngress'
     Properties:
@@ -230,7 +200,6 @@ Resources:
         - ServiceLBSecurityGroup
         - GroupId
       ToPort: 80
-  {% endif %}  
   ServiceTaskCountTarget:
     Type: 'AWS::ApplicationAutoScaling::ScalableTarget'
     DependsOn: Service
