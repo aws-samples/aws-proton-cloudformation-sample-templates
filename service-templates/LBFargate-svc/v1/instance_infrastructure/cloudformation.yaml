@@ -81,7 +81,7 @@ Resources:
   ServiceLBPublicListenerECSGroup:
     Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
     Properties:
-      Port: 80
+      Port: '{{service_instance.inputs.port}}'
       {% if service_instance.inputs.loadbalancer_type == 'application' %}
       Protocol: HTTP
       TargetGroupAttributes:
@@ -124,7 +124,7 @@ Resources:
               awslogs-region: !Ref 'AWS::Region'
           Name: '{{service_instance.name}}'
           PortMappings:
-            - ContainerPort: 80
+            - ContainerPort: '{{service_instance.inputs.port}}'
               Protocol: tcp
           Environment:
             - Name: SNS_TOPIC_ARN
@@ -159,12 +159,12 @@ Resources:
       LaunchType: FARGATE
       LoadBalancers:
         - ContainerName: '{{service_instance.name}}'
-          ContainerPort: 80
+          ContainerPort: '{{service_instance.inputs.port}}'
           TargetGroupArn: !Ref ServiceLBPublicListenerECSGroup
       NetworkConfiguration:
         AwsvpcConfiguration:
 	{% if service_instance.inputs.subnet_type == 'private' %}
-	  AssignPublicIp: DISABLED
+          AssignPublicIp: DISABLED
 	{% else %}
           AssignPublicIp: ENABLED
 	{% endif %}
