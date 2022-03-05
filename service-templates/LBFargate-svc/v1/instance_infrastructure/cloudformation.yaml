@@ -27,13 +27,16 @@ Resources:
         - Key: deletion_protection.enabled
           Value: 'false'
       Scheme: internet-facing
+      {% if service_instance.inputs.loadbalancer_type == 'application' %}
       SecurityGroups:
         - !GetAtt 
           - ServiceLBSecurityGroup
           - GroupId
+      {% endif %}
       Subnets:
         - '{{environment.outputs.PublicSubnet1}}'
         - '{{environment.outputs.PublicSubnet2}}'
+      {% if service_instance.inputs.loadbalancer_type == 'application' %}
       Type: application
   ServiceLBSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
@@ -59,6 +62,9 @@ Resources:
         - GroupId
       FromPort: 80
       ToPort: 80
+      {% else %}
+      Type: network
+      {% endif %}           
   ServiceLBPublicListener:
     Type: 'AWS::ElasticLoadBalancingV2::Listener'
     Properties:
@@ -67,15 +73,23 @@ Resources:
           Type: forward
       LoadBalancerArn: !Ref ServiceLB
       Port: 80
+      {% if service_instance.inputs.loadbalancer_type == 'application' %}
       Protocol: HTTP
+      {% else %}
+      Protocol: TCP
+      {% endif %}              
   ServiceLBPublicListenerECSGroup:
     Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
     Properties:
       Port: '{{service_instance.inputs.port}}'
+      {% if service_instance.inputs.loadbalancer_type == 'application' %}
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: stickiness.enabled
           Value: 'false'
+      {% else %}
+      Protocol: TCP
+      {% endif %}              
       TargetType: ip
       VpcId: '{{environment.outputs.VPC}}'
   ServiceTaskDefTaskRole:
