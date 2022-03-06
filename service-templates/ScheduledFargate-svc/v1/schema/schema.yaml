@@ -19,10 +19,21 @@ schema:
           description: "The size of the task you want to run"
           enum: ["x-small", "small", "medium", "large", "x-large"]
           default: "x-small"
+        subnet_type:
+          type: string
+          description: "Subnet type for your service"
+          enum: ["public", "private"]
+          default: "public"
         image:
           type: string
           description: "The name/url of the container image"
           default: "public.ecr.aws/z9d2n7e1/nginx:1.21.0"
+          minLength: 1
+          maxLength: 200
+        schedule_expression:
+          type: string
+          description: "The schedule or rate (frequency) for CloudWatch Events"
+          default: "rate(5 minutes)"
           minLength: 1
           maxLength: 200
 

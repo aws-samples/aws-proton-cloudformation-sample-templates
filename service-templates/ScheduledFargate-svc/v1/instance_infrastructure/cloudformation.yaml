@@ -1,11 +1,29 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Deploy a service on AWS Fargate, hosted in a public/private subnet, and accessible via a public load balancer.
+Description: Deploy a scheduled Fargate task that will be initiated off of CloudWatch Events.
+
+Mappings:
+  TaskSize:
+    x-small:
+      cpu: 256
+      memory: 512
+    small:
+      cpu: 512
+      memory: 1024
+    medium:
+      cpu: 1024
+      memory: 2048
+    large:
+      cpu: 2048
+      memory: 4096
+    x-large:
+      cpu: 4096
+      memory: 8192
 
 Resources:
   ScheduledFargateTaskScheduledEventRule:
     Type: 'AWS::Events::Rule'
     Properties:
-      ScheduleExpression: rate(5 minutes)
+      ScheduleExpression: '{{service_instance.inputs.schedule_expression}}'
       State: ENABLED
       Targets:
         - Arn: '{{environment.outputs.ClusterArn}}'
@@ -13,15 +31,24 @@ Resources:
             LaunchType: FARGATE
             NetworkConfiguration:
               AwsVpcConfiguration:
+              {% if service_instance.inputs.subnet_type == 'private' %}
                 AssignPublicIp: DISABLED
+              {% else %}
+                AssignPublicIp: ENABLED
+              {% endif %}
                 SecurityGroups:
                   - !GetAtt 
                     - ScheduledFargateTaskScheduledTaskDefSecurityGroup
                     - GroupId
                 Subnets:
+                {% if service_instance.inputs.subnet_type == 'private' %}
                   - '{{environment.outputs.PrivateSubnet1}}'
                   - '{{environment.outputs.PrivateSubnet2}}'
-            TaskCount: 1
+                {% else %}
+                  - '{{environment.outputs.PublicSubnet1}}'
+                  - '{{environment.outputs.PublicSubnet2}}'
+                {% endif %}
+            TaskCount: '{{service_instance.inputs.desired_count}}'
             TaskDefinitionArn: !Ref ScheduledFargateTaskScheduledTaskDef
           Id: Target0
           Input: '{}'
@@ -38,6 +65,14 @@ Resources:
             Principal:
               Service: ecs-tasks.amazonaws.com
         Version: 2012-10-17
+      Policies:
+        - PolicyName: 'Publish2SNS'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'sns:Publish'
+                Resource: '{{environment.outputs.SNSTopic}}'
   ScheduledFargateTaskScheduledTaskDef:
     Type: 'AWS::ECS::TaskDefinition'
     Properties:
@@ -51,10 +86,13 @@ Resources:
               awslogs-stream-prefix: '{{service.name}}/{{service_instance.name}}'
               awslogs-region: !Ref 'AWS::Region'
           Name: '{{service_instance.name}}'
-      Cpu: '256'
+          Environment:
+            - Name: SNS_TOPIC_ARN
+              Value: '{"ping":"{{environment.outputs.SNSTopic}}"}'
+      Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
       ExecutionRoleArn: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
       Family: '{{service.name}}_{{service_instance.name}}'
-      Memory: '512'
+      Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
@@ -65,8 +103,6 @@ Resources:
     Type: 'AWS::Logs::LogGroup'
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain
-    Properties:
-      LogGroupName: '{{service.name}}/{{service_instance.name}}'
   ScheduledFargateTaskScheduledTaskDefEventsRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -103,7 +139,7 @@ Resources:
   ScheduledFargateTaskScheduledTaskDefSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: Automatically created Security Group for Scheduled Task
+      GroupDescription: Automatically created Security Group for the Task
       SecurityGroupEgress:
         - CidrIp: 0.0.0.0/0
           Description: Allow all outbound traffic by default
