@@ -1,6 +1,23 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Deploy a service on AWS Fargate, hosted in a public or private subnet, 
              and accessible via a public load balancer.
+Mappings:
+  TaskSize:
+    x-small:
+      cpu: 256
+      memory: 512
+    small:
+      cpu: 512
+      memory: 1024
+    medium:
+      cpu: 1024
+      memory: 2048
+    large:
+      cpu: 2048
+      memory: 4096
+    x-large:
+      cpu: 4096
+      memory: 8192
 
 Resources:
   ServiceLB:
@@ -10,13 +27,16 @@ Resources:
         - Key: deletion_protection.enabled
           Value: 'false'
       Scheme: internet-facing
+      {% if service_instance.inputs.loadbalancer_type == 'application' %}
       SecurityGroups:
         - !GetAtt 
           - ServiceLBSecurityGroup
           - GroupId
+      {% endif %}
       Subnets:
         - '{{environment.outputs.PublicSubnet1}}'
         - '{{environment.outputs.PublicSubnet2}}'
+      {% if service_instance.inputs.loadbalancer_type == 'application' %}
       Type: application
   ServiceLBSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
@@ -42,6 +62,9 @@ Resources:
         - GroupId
       FromPort: 80
       ToPort: 80
+      {% else %}
+      Type: network # Network Load Balancers don't have associated security groups.
+      {% endif %}           
   ServiceLBPublicListener:
     Type: 'AWS::ElasticLoadBalancingV2::Listener'
     Properties:
@@ -50,15 +73,23 @@ Resources:
           Type: forward
       LoadBalancerArn: !Ref ServiceLB
       Port: 80
+      {% if service_instance.inputs.loadbalancer_type == 'application' %}
       Protocol: HTTP
+      {% else %}
+      Protocol: TCP
+      {% endif %}              
   ServiceLBPublicListenerECSGroup:
     Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
     Properties:
       Port: 80
+      {% if service_instance.inputs.loadbalancer_type == 'application' %}
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: stickiness.enabled
           Value: 'false'
+      {% else %}
+      Protocol: TCP
+      {% endif %}              
       TargetType: ip
       VpcId: '{{environment.outputs.VPC}}'
   ServiceTaskDefTaskRole:
@@ -100,10 +131,10 @@ Resources:
               Value: '{"ping":"{{environment.outputs.SNSTopic}}"}'
             - Name: BACKEND_URL
               Value: "{{service_instance.inputs.backendurl}}"
-      Cpu: '256'
+      Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
       ExecutionRoleArn: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
       Family: '{{service.name}}_{{service_instance.name}}'
-      Memory: '512'
+      Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
@@ -122,7 +153,7 @@ Resources:
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 50
-      DesiredCount: 1
+      DesiredCount: '{{service_instance.inputs.desired_count}}'
       EnableECSManagedTags: false
       HealthCheckGracePeriodSeconds: 60
       LaunchType: FARGATE
@@ -132,14 +163,23 @@ Resources:
           TargetGroupArn: !Ref ServiceLBPublicListenerECSGroup
       NetworkConfiguration:
         AwsvpcConfiguration:
+	{% if service_instance.inputs.subnet_type == 'private' %}
+	  AssignPublicIp: DISABLED
+	{% else %}
           AssignPublicIp: ENABLED
+	{% endif %}
           SecurityGroups:
             - !GetAtt 
               - ServiceSecurityGroup
               - GroupId
           Subnets:
+	  {% if service_instance.inputs.subnet_type == 'private' %}
+            - '{{environment.outputs.PrivateSubnet1}}'
+            - '{{environment.outputs.PrivateSubnet2}}'	  
+	  {% else %}
             - '{{environment.outputs.PublicSubnet1}}'
             - '{{environment.outputs.PublicSubnet2}}'
+	  {% endif %}
       ServiceRegistries:
         - RegistryArn: !GetAtt 
             - ServiceCloudmapService
@@ -159,17 +199,24 @@ Resources:
         RoutingPolicy: MULTIVALUE
       HealthCheckCustomConfig:
         FailureThreshold: 1
-      Name: '{{service.name}}_{{service_instance.name}}'
+      Name: '{{service_instance.name}}.{{service.name}}'
       NamespaceId: '{{environment.outputs.CloudMapNamespaceId}}'
   ServiceSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: Automatically created Security Group for ALBFargate Service
+      GroupDescription: Automatically created Security Group for the Service
+      {% if service_instance.inputs.loadbalancer_type == 'network' %}
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all inbound traffic by default
+          IpProtocol: '-1'
+      {% endif %}
       SecurityGroupEgress:
         - CidrIp: 0.0.0.0/0
           Description: Allow all outbound traffic by default
           IpProtocol: '-1'
       VpcId: '{{environment.outputs.VPC}}'
+  {% if service_instance.inputs.loadbalancer_type == 'application' %}
   ServiceSecurityGroupfromServiceLBSecurityGroup:
     Type: 'AWS::EC2::SecurityGroupIngress'
     Properties:
@@ -183,6 +230,7 @@ Resources:
         - ServiceLBSecurityGroup
         - GroupId
       ToPort: 80
+  {% endif %}  
   ServiceTaskCountTarget:
     Type: 'AWS::ApplicationAutoScaling::ScalableTarget'
     DependsOn: Service
@@ -201,7 +249,7 @@ Resources:
   ServiceTaskCountTargetCpuScaling:
     Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
     Properties:
-      PolicyName: ALBFargateServiceTaskCountTargetCpuScaling
+      PolicyName: LBFargateServiceTaskCountTargetCpuScaling
       PolicyType: TargetTrackingScaling
       ScalingTargetId: !Ref ServiceTaskCountTarget
       TargetTrackingScalingPolicyConfiguration:
@@ -211,7 +259,7 @@ Resources:
   ServiceTaskCountTargetMemoryScaling502AB098:
     Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
     Properties:
-      PolicyName: ALBFargateServiceTaskCountTargetMemoryScaling
+      PolicyName: LBFargateServiceTaskCountTargetMemoryScaling
       PolicyType: TargetTrackingScaling
       ScalingTargetId: !Ref ServiceTaskCountTarget
       TargetTrackingScalingPolicyConfiguration:
