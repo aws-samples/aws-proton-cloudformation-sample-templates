@@ -8,9 +8,13 @@ Mappings:
     VPC:
       CIDR: '{{ environment.inputs.vpc_cidr}}'
     Public1:
-      CIDR: '{{ environment.inputs.subnet_one_cidr}}'
+      CIDR: '{{ environment.inputs.public_subnet_one_cidr}}'
     Public2:
-      CIDR: '{{ environment.inputs.subnet_two_cidr}}'   
+      CIDR: '{{ environment.inputs.public_subnet_two_cidr}}'
+    Private1:
+      CIDR: '{{ environment.inputs.private_subnet_one_cidr}}'
+    Private2:
+      CIDR: '{{ environment.inputs.private_subnet_two_cidr}}'   
 
 Resources:
   VPC:
@@ -99,7 +103,7 @@ Resources:
   PrivateSubnet1:
     Type: 'AWS::EC2::Subnet'
     Properties:
-      CidrBlock: 10.0.128.0/18
+      CidrBlock: !FindInMap ['SubnetConfig', 'Private1', 'CIDR']
       VpcId: !Ref VPC
       AvailabilityZone:
         Fn::Select:
@@ -124,7 +128,7 @@ Resources:
   PrivateSubnet2:
     Type: 'AWS::EC2::Subnet'
     Properties:
-      CidrBlock: 10.0.192.0/18
+      CidrBlock: !FindInMap ['SubnetConfig', 'Private2', 'CIDR']
       VpcId: !Ref VPC
       AvailabilityZone:
         Fn::Select:
