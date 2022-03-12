@@ -225,7 +225,7 @@ Resources:
         - GroupId
       ToPort: 80
       {% else %}
-      CidrIp: {{environment.outputs.VPC_CIDR}} #Network Load Balancers do not have associated security groups
+      CidrIp: {{environment.outputs.VPCCidr}} #Network Load Balancers do not have associated security groups
       {% endif %}
   ServiceTaskCountTarget:
     Type: 'AWS::ApplicationAutoScaling::ScalableTarget'
