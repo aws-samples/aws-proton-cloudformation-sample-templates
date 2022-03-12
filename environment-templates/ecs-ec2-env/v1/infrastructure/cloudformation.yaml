@@ -592,6 +592,6 @@ Outputs:
   CloudMapNamespaceId:
     Description: CloudMap namespace Id
     Value: !GetAtt 'CloudMapNamespace.Id'
-  EcsHostSecurityGroup:
-    Description: A security group used to allow containers to receive traffic
-    Value: !Ref 'EcsHostSecurityGroup'
+  # EcsHostSecurityGroup:
+  #   Description: A security group used to allow containers to receive traffic
+  #   Value: !Ref 'EcsHostSecurityGroup'
