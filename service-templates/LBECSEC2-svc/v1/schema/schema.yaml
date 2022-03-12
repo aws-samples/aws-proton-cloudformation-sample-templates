@@ -1,0 +1,73 @@
+schema:
+  format:
+    openapi: "3.0.0"
+  service_input_type: "LoadBalancedECSEC2ServiceInput"
+  pipeline_input_type: "PipelineInputs"
+
+  types:
+    LoadBalancedECSEC2ServiceInput:
+      type: object
+      description: "Input properties for a loadbalanced ECSEC2 service"
+      properties:
+        port:
+          type: number
+          description: "The port to route traffic to"
+          default: 80
+          minimum: 0
+          maximum: 65535
+        desired_count:
+          type: number
+          description: "The default number of ECSEC2 tasks you want running"
+          default: 1
+          minimum: 1
+        task_size:
+          type: string
+          description: "The size of the task you want to run"
+          enum: ["x-small", "small", "medium", "large", "x-large"]
+          default: "x-small"
+        loadbalancer_type:
+          type: string
+          description: "Type of loadbalancer to front your service"
+          enum: ["application", "network"]
+          default: "application"
+        image:
+          type: string
+          description: "The name/url of the container image"
+          default: "public.ecr.aws/z9d2n7e1/nginx:1.21.0"
+          minLength: 1
+          maxLength: 200
+        backendurl:
+          type: string
+          description: "Service discovery url of the backend service"
+          default: "BackendECSEC2-svc-prod.BackendECSEC2-svc.ecsec2-prod-env.local:80"
+          minLength: 1
+          maxLength: 200
+
+    PipelineInputs:
+      type: object
+      description: "Pipeline input properties"
+      properties:
+        service_dir:
+          type: string
+          description: "Source directory for the service"
+          default: "LBFargate-svc"
+          minLength: 1
+          maxLength: 100
+        dockerfile:
+          type: string
+          description: "The location of the Dockerfile to build"
+          default: "Dockerfile"
+          minLength: 1
+          maxLength: 100
+        unit_test_command:
+          type: string
+          description: "The command to run to unit test the application code"
+          default: "echo 'add your unit test command here'"
+          minLength: 1
+          maxLength: 200
+        environment_account_ids:
+          type: string
+          pattern: '^$|^\d{12}(,\d{12})*$'
+          description: "The environment account ids for service instances using cross account environment, separated by ,"
+          default: ""
+          maxLength: 200
