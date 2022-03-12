@@ -179,6 +179,7 @@ Resources:
   ECSHostSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
+      GroupDescription: Access to the ECS hosts that run containers
       SecurityGroupEgress:
         - CidrIp: 0.0.0.0/0
           Description: Allow all outbound traffic by default
