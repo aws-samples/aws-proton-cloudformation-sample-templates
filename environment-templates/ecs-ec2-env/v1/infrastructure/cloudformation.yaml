@@ -193,11 +193,7 @@ Resources:
           - Action: sts:AssumeRole
             Effect: Allow
             Principal:
-              Service:
-                Fn::Join:
-                  - ""
-                  - - ec2.
-                    - Ref: AWS::URLSuffix
+              Service: [application-autoscaling.amazonaws.com]
         Version: "2012-10-17"
   ECSHostInstanceRoleDefaultPolicy:
     Type: AWS::IAM::Policy
