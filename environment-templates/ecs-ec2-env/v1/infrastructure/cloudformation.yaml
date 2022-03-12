@@ -243,7 +243,7 @@ Resources:
   EC2LaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      ImageId: !Ref 'LatestECSOptimizedAMI'
+      ImageId: !Ref 'ECSAMI'
       InstanceType: '{{environment.inputs.InstanceType}}'
       IamInstanceProfile:
         Ref: EC2InstanceProfile
@@ -560,7 +560,7 @@ Resources:
               StringEquals:
                 "sns:Protocol": "sqs"
 Parameters:
-  LatestECSOptimizedAMI:
+  ECSAMI:
     Description: AMI ID
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: {{ environment.inputs.ECSAMI}}
