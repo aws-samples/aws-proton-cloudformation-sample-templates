@@ -243,7 +243,7 @@ Resources:
   EC2LaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      ImageId: '{{ environment.inputs.ECSAMI}}'
+      ImageId: !Ref 'LatestECSOptimizedAMI'
       InstanceType: '{{environment.inputs.InstanceType}}'
       IamInstanceProfile:
         Ref: EC2InstanceProfile
@@ -559,6 +559,11 @@ Resources:
             Condition:
               StringEquals:
                 "sns:Protocol": "sqs"
+Parameters:
+  LatestECSOptimizedAMI:
+    Description: AMI ID
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: {{ environment.inputs.ECSAMI}}
 Outputs:
   Cluster:
     Description: The name of the ECS cluster
