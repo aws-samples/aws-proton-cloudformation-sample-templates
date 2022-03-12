@@ -215,7 +215,7 @@ Outputs:
   VPC:
     Description: The ID of the VPC that this stack is deployed in
     Value: !Ref 'VPC'
-  VPC_CIDR:
+  VPCCidr:
     Description: CIDR Block for the VPC
     Value: !GetAtt 'VPC.CidrBlock'
   PublicSubnet1:
