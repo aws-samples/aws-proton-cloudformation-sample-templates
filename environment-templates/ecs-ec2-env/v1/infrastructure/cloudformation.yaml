@@ -176,366 +176,366 @@ Resources:
         Version: 2012-10-17
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
-  ECSHostSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      SecurityGroupEgress:
-        - CidrIp: 0.0.0.0/0
-          Description: Allow all outbound traffic by default
-          IpProtocol: "-1"
-      VpcId:
-        Ref: !Ref VPC
-  ECSHostInstanceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Action: sts:AssumeRole
-            Effect: Allow
-            Principal:
-              Service:
-                Fn::Join:
-                  - ""
-                  - - ec2.
-                    - Ref: AWS::URLSuffix
-        Version: "2012-10-17"
-  ECSHostInstanceRoleDefaultPolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyDocument:
-        Statement:
-          - Action:
-              - ecs:DeregisterContainerInstance
-              - ecs:RegisterContainerInstance
-              - ecs:Submit*
-            Effect: Allow
-            Resource:
-              Fn::GetAtt:
-                - Cluster
-                - Arn
-          - Action:
-              - ecs:Poll
-              - ecs:StartTelemetrySession
-            Condition:
-              ArnEquals:
-                ecs:cluster:
-                  Fn::GetAtt:
-                    - Cluster
-                    - Arn
-            Effect: Allow
-            Resource: "*"
-          - Action:
-              - ecs:DiscoverPollEndpoint
-              - ecr:GetAuthorizationToken
-              - logs:CreateLogStream
-              - logs:PutLogEvents
-            Effect: Allow
-            Resource: "*"
-        Version: "2012-10-17"
-      PolicyName: ECSHostInstanceRoleDefaultPolicy
-      Roles:
-        - Ref: ECSHostInstanceRole
-  EC2InstanceProfile:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      Roles:
-        - Ref: ECSHostInstanceRole
-  EC2LaunchConfig:
-    Type: AWS::AutoScaling::LaunchConfiguration
-    Properties:
-      ImageId: '{{environment.inputs.ECSAMI}}'
-      InstanceType: '{{environment.inputs.InstanceType}}'
-      IamInstanceProfile:
-        Ref: EC2InstanceProfile
-      SecurityGroups:
-        - Fn::GetAtt:
-            - ECSHostSecurityGroup
-            - GroupId
-      UserData:
-        Fn::Base64:
-          Fn::Join:
-            - ""
-            - - |-
-                #!/bin/bash
-                echo ECS_CLUSTER=
-              - Ref: Cluster
-              - |-2
-                 >> /etc/ecs/ecs.config
-                sudo iptables --insert FORWARD 1 --in-interface docker+ --destination 169.254.169.254/32 --jump DROP
-                sudo service iptables save
-                echo ECS_AWSVPC_BLOCK_IMDS=true >> /etc/ecs/ecs.config
-    DependsOn:
-      - ECSHostInstanceRoleDefaultPolicy
-      - ECSHostInstanceRole
-  EC2AutoScalingGroup:
-    Type: AWS::AutoScaling::AutoScalingGroup
-    Properties:
-      MaxSize: '{{environment.inputs.MaxSize}}'
-      MinSize: "1"
-      DesiredCapacity: '{{environment.inputs.DesiredCapacity}}'
-      LaunchConfigurationName:
-        Ref: EC2LaunchConfig
-      VPCZoneIdentifier:
-      {% if environment.inputs.subnet_type == 'private' %}
-        - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
-      {% else %}
-        - !Ref PublicSubnet1
-        - !Ref PublicSubnet2
-      {% endif %}
-    UpdatePolicy:
-      AutoScalingReplacingUpdate:
-        WillReplace: true
-      AutoScalingScheduledAction:
-        IgnoreUnmodifiedGroupSizeProperties: true
-  ECSDrainHookFunctionServiceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Action: sts:AssumeRole
-            Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-        Version: "2012-10-17"
-      ManagedPolicyArns:
-        - Fn::Join:
-            - ""
-            - - "arn:"
-              - Ref: AWS::Partition
-              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-  ECSDrainHookFunctionServiceRoleDefaultPolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyDocument:
-        Statement:
-          - Action:
-              - ec2:DescribeInstances
-              - ec2:DescribeInstanceAttribute
-              - ec2:DescribeInstanceStatus
-              - ec2:DescribeHosts
-            Effect: Allow
-            Resource: "*"
-          - Action: autoscaling:CompleteLifecycleAction
-            Effect: Allow
-            Resource:
-              Fn::Join:
-                - ""
-                - - "arn:"
-                  - Ref: AWS::Partition
-                  - ":autoscaling:"
-                  - Ref: AWS::Region
-                  - ":"
-                  - Ref: AWS::AccountId
-                  - :autoScalingGroup:*:autoScalingGroupName/
-                  - Ref: EC2AutoScalingGroup
-          - Action:
-              - ecs:DescribeContainerInstances
-              - ecs:DescribeTasks
-            Condition:
-              ArnEquals:
-                ecs:cluster:
-                  Fn::GetAtt:
-                    - Cluster
-                    - Arn
-            Effect: Allow
-            Resource: "*"
-          - Action:
-              - ecs:ListContainerInstances
-              - ecs:SubmitContainerStateChange
-              - ecs:SubmitTaskStateChange
-            Effect: Allow
-            Resource:
-              Fn::GetAtt:
-                - Cluster
-                - Arn
-          - Action:
-              - ecs:UpdateContainerInstancesState
-              - ecs:ListTasks
-            Condition:
-              ArnEquals:
-                ecs:cluster:
-                  Fn::GetAtt:
-                    - Cluster
-                    - Arn
-            Effect: Allow
-            Resource: "*"
-        Version: "2012-10-17"
-      PolicyName: ECSDrainHookFunctionServiceRoleDefaultPolicy
-      Roles:
-        - Ref: ECSDrainHookFunctionServiceRole
-  ECSDrainHookFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      Code:
-        ZipFile: |
-          import boto3, json, os, time
+  # ECSHostSecurityGroup:
+  #   Type: AWS::EC2::SecurityGroup
+  #   Properties:
+  #     SecurityGroupEgress:
+  #       - CidrIp: 0.0.0.0/0
+  #         Description: Allow all outbound traffic by default
+  #         IpProtocol: "-1"
+  #     VpcId:
+  #       Ref: !Ref VPC
+  # ECSHostInstanceRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Statement:
+  #         - Action: sts:AssumeRole
+  #           Effect: Allow
+  #           Principal:
+  #             Service:
+  #               Fn::Join:
+  #                 - ""
+  #                 - - ec2.
+  #                   - Ref: AWS::URLSuffix
+  #       Version: "2012-10-17"
+  # ECSHostInstanceRoleDefaultPolicy:
+  #   Type: AWS::IAM::Policy
+  #   Properties:
+  #     PolicyDocument:
+  #       Statement:
+  #         - Action:
+  #             - ecs:DeregisterContainerInstance
+  #             - ecs:RegisterContainerInstance
+  #             - ecs:Submit*
+  #           Effect: Allow
+  #           Resource:
+  #             Fn::GetAtt:
+  #               - Cluster
+  #               - Arn
+  #         - Action:
+  #             - ecs:Poll
+  #             - ecs:StartTelemetrySession
+  #           Condition:
+  #             ArnEquals:
+  #               ecs:cluster:
+  #                 Fn::GetAtt:
+  #                   - Cluster
+  #                   - Arn
+  #           Effect: Allow
+  #           Resource: "*"
+  #         - Action:
+  #             - ecs:DiscoverPollEndpoint
+  #             - ecr:GetAuthorizationToken
+  #             - logs:CreateLogStream
+  #             - logs:PutLogEvents
+  #           Effect: Allow
+  #           Resource: "*"
+  #       Version: "2012-10-17"
+  #     PolicyName: ECSHostInstanceRoleDefaultPolicy
+  #     Roles:
+  #       - Ref: ECSHostInstanceRole
+  # EC2InstanceProfile:
+  #   Type: AWS::IAM::InstanceProfile
+  #   Properties:
+  #     Roles:
+  #       - Ref: ECSHostInstanceRole
+  # EC2LaunchConfig:
+  #   Type: AWS::AutoScaling::LaunchConfiguration
+  #   Properties:
+  #     ImageId: '{{environment.inputs.ECSAMI}}'
+  #     InstanceType: '{{environment.inputs.InstanceType}}'
+  #     IamInstanceProfile:
+  #       Ref: EC2InstanceProfile
+  #     SecurityGroups:
+  #       - Fn::GetAtt:
+  #           - ECSHostSecurityGroup
+  #           - GroupId
+  #     UserData:
+  #       Fn::Base64:
+  #         Fn::Join:
+  #           - ""
+  #           - - |-
+  #               #!/bin/bash
+  #               echo ECS_CLUSTER=
+  #             - Ref: Cluster
+  #             - |-2
+  #                >> /etc/ecs/ecs.config
+  #               sudo iptables --insert FORWARD 1 --in-interface docker+ --destination 169.254.169.254/32 --jump DROP
+  #               sudo service iptables save
+  #               echo ECS_AWSVPC_BLOCK_IMDS=true >> /etc/ecs/ecs.config
+  #   DependsOn:
+  #     - ECSHostInstanceRoleDefaultPolicy
+  #     - ECSHostInstanceRole
+  # EC2AutoScalingGroup:
+  #   Type: AWS::AutoScaling::AutoScalingGroup
+  #   Properties:
+  #     MaxSize: '{{environment.inputs.MaxSize}}'
+  #     MinSize: "1"
+  #     DesiredCapacity: '{{environment.inputs.DesiredCapacity}}'
+  #     LaunchConfigurationName:
+  #       Ref: EC2LaunchConfig
+  #     VPCZoneIdentifier:
+  #     {% if environment.inputs.subnet_type == 'private' %}
+  #       - !Ref PrivateSubnet1
+  #       - !Ref PrivateSubnet2
+  #     {% else %}
+  #       - !Ref PublicSubnet1
+  #       - !Ref PublicSubnet2
+  #     {% endif %}
+  #   UpdatePolicy:
+  #     AutoScalingReplacingUpdate:
+  #       WillReplace: true
+  #     AutoScalingScheduledAction:
+  #       IgnoreUnmodifiedGroupSizeProperties: true
+  # ECSDrainHookFunctionServiceRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Statement:
+  #         - Action: sts:AssumeRole
+  #           Effect: Allow
+  #           Principal:
+  #             Service: lambda.amazonaws.com
+  #       Version: "2012-10-17"
+  #     ManagedPolicyArns:
+  #       - Fn::Join:
+  #           - ""
+  #           - - "arn:"
+  #             - Ref: AWS::Partition
+  #             - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  # ECSDrainHookFunctionServiceRoleDefaultPolicy:
+  #   Type: AWS::IAM::Policy
+  #   Properties:
+  #     PolicyDocument:
+  #       Statement:
+  #         - Action:
+  #             - ec2:DescribeInstances
+  #             - ec2:DescribeInstanceAttribute
+  #             - ec2:DescribeInstanceStatus
+  #             - ec2:DescribeHosts
+  #           Effect: Allow
+  #           Resource: "*"
+  #         - Action: autoscaling:CompleteLifecycleAction
+  #           Effect: Allow
+  #           Resource:
+  #             Fn::Join:
+  #               - ""
+  #               - - "arn:"
+  #                 - Ref: AWS::Partition
+  #                 - ":autoscaling:"
+  #                 - Ref: AWS::Region
+  #                 - ":"
+  #                 - Ref: AWS::AccountId
+  #                 - :autoScalingGroup:*:autoScalingGroupName/
+  #                 - Ref: EC2AutoScalingGroup
+  #         - Action:
+  #             - ecs:DescribeContainerInstances
+  #             - ecs:DescribeTasks
+  #           Condition:
+  #             ArnEquals:
+  #               ecs:cluster:
+  #                 Fn::GetAtt:
+  #                   - Cluster
+  #                   - Arn
+  #           Effect: Allow
+  #           Resource: "*"
+  #         - Action:
+  #             - ecs:ListContainerInstances
+  #             - ecs:SubmitContainerStateChange
+  #             - ecs:SubmitTaskStateChange
+  #           Effect: Allow
+  #           Resource:
+  #             Fn::GetAtt:
+  #               - Cluster
+  #               - Arn
+  #         - Action:
+  #             - ecs:UpdateContainerInstancesState
+  #             - ecs:ListTasks
+  #           Condition:
+  #             ArnEquals:
+  #               ecs:cluster:
+  #                 Fn::GetAtt:
+  #                   - Cluster
+  #                   - Arn
+  #           Effect: Allow
+  #           Resource: "*"
+  #       Version: "2012-10-17"
+  #     PolicyName: ECSDrainHookFunctionServiceRoleDefaultPolicy
+  #     Roles:
+  #       - Ref: ECSDrainHookFunctionServiceRole
+  # ECSDrainHookFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     Code:
+  #       ZipFile: |
+  #         import boto3, json, os, time
 
-          ecs = boto3.client('ecs')
-          autoscaling = boto3.client('autoscaling')
+  #         ecs = boto3.client('ecs')
+  #         autoscaling = boto3.client('autoscaling')
 
 
-          def lambda_handler(event, context):
-            print(json.dumps(event))
-            cluster = os.environ['CLUSTER']
-            snsTopicArn = event['Records'][0]['Sns']['TopicArn']
-            lifecycle_event = json.loads(event['Records'][0]['Sns']['Message'])
-            instance_id = lifecycle_event.get('EC2InstanceId')
-            if not instance_id:
-              print('Got event without EC2InstanceId: %s', json.dumps(event))
-              return
+  #         def lambda_handler(event, context):
+  #           print(json.dumps(event))
+  #           cluster = os.environ['CLUSTER']
+  #           snsTopicArn = event['Records'][0]['Sns']['TopicArn']
+  #           lifecycle_event = json.loads(event['Records'][0]['Sns']['Message'])
+  #           instance_id = lifecycle_event.get('EC2InstanceId')
+  #           if not instance_id:
+  #             print('Got event without EC2InstanceId: %s', json.dumps(event))
+  #             return
 
-            instance_arn = container_instance_arn(cluster, instance_id)
-            print('Instance %s has container instance ARN %s' % (lifecycle_event['EC2InstanceId'], instance_arn))
+  #           instance_arn = container_instance_arn(cluster, instance_id)
+  #           print('Instance %s has container instance ARN %s' % (lifecycle_event['EC2InstanceId'], instance_arn))
 
-            if not instance_arn:
-              return
+  #           if not instance_arn:
+  #             return
 
-            task_arns = container_instance_task_arns(cluster, instance_arn)
+  #           task_arns = container_instance_task_arns(cluster, instance_arn)
             
-            if task_arns:
-              print('Instance ARN %s has task ARNs %s' % (instance_arn, ', '.join(task_arns)))
+  #           if task_arns:
+  #             print('Instance ARN %s has task ARNs %s' % (instance_arn, ', '.join(task_arns)))
 
-            while has_tasks(cluster, instance_arn, task_arns):
-              time.sleep(10)
+  #           while has_tasks(cluster, instance_arn, task_arns):
+  #             time.sleep(10)
 
-            try:
-              print('Terminating instance %s' % instance_id)
-              autoscaling.complete_lifecycle_action(
-                  LifecycleActionResult='CONTINUE',
-                  **pick(lifecycle_event, 'LifecycleHookName', 'LifecycleActionToken', 'AutoScalingGroupName'))
-            except Exception as e:
-              # Lifecycle action may have already completed.
-              print(str(e))
+  #           try:
+  #             print('Terminating instance %s' % instance_id)
+  #             autoscaling.complete_lifecycle_action(
+  #                 LifecycleActionResult='CONTINUE',
+  #                 **pick(lifecycle_event, 'LifecycleHookName', 'LifecycleActionToken', 'AutoScalingGroupName'))
+  #           except Exception as e:
+  #             # Lifecycle action may have already completed.
+  #             print(str(e))
 
 
-          def container_instance_arn(cluster, instance_id):
-            """Turn an instance ID into a container instance ARN."""
-            arns = ecs.list_container_instances(cluster=cluster, filter='ec2InstanceId==' + instance_id)['containerInstanceArns']
-            if not arns:
-              return None
-            return arns[0]
+  #         def container_instance_arn(cluster, instance_id):
+  #           """Turn an instance ID into a container instance ARN."""
+  #           arns = ecs.list_container_instances(cluster=cluster, filter='ec2InstanceId==' + instance_id)['containerInstanceArns']
+  #           if not arns:
+  #             return None
+  #           return arns[0]
 
-          def container_instance_task_arns(cluster, instance_arn):
-            """Fetch tasks for a container instance ARN."""
-            arns = ecs.list_tasks(cluster=cluster, containerInstance=instance_arn)['taskArns']
-            return arns
+  #         def container_instance_task_arns(cluster, instance_arn):
+  #           """Fetch tasks for a container instance ARN."""
+  #           arns = ecs.list_tasks(cluster=cluster, containerInstance=instance_arn)['taskArns']
+  #           return arns
 
-          def has_tasks(cluster, instance_arn, task_arns):
-            """Return True if the instance is running tasks for the given cluster."""
-            instances = ecs.describe_container_instances(cluster=cluster, containerInstances=[instance_arn])['containerInstances']
-            if not instances:
-              return False
-            instance = instances[0]
+  #         def has_tasks(cluster, instance_arn, task_arns):
+  #           """Return True if the instance is running tasks for the given cluster."""
+  #           instances = ecs.describe_container_instances(cluster=cluster, containerInstances=[instance_arn])['containerInstances']
+  #           if not instances:
+  #             return False
+  #           instance = instances[0]
 
-            if instance['status'] == 'ACTIVE':
-              # Start draining, then try again later
-              set_container_instance_to_draining(cluster, instance_arn)
-              return True
+  #           if instance['status'] == 'ACTIVE':
+  #             # Start draining, then try again later
+  #             set_container_instance_to_draining(cluster, instance_arn)
+  #             return True
 
-            task_count = None
+  #           task_count = None
 
-            if task_arns:
-              # Fetch details for tasks running on the container instance
-              tasks = ecs.describe_tasks(cluster=cluster, tasks=task_arns)['tasks']
-              if tasks:
-                # Consider any non-stopped tasks as running
-                task_count = sum(task['lastStatus'] != 'STOPPED' for task in tasks) + instance['pendingTasksCount']
+  #           if task_arns:
+  #             # Fetch details for tasks running on the container instance
+  #             tasks = ecs.describe_tasks(cluster=cluster, tasks=task_arns)['tasks']
+  #             if tasks:
+  #               # Consider any non-stopped tasks as running
+  #               task_count = sum(task['lastStatus'] != 'STOPPED' for task in tasks) + instance['pendingTasksCount']
             
-            if not task_count:
-              # Fallback to instance task counts if detailed task information is unavailable
-              task_count = instance['runningTasksCount'] + instance['pendingTasksCount']
+  #           if not task_count:
+  #             # Fallback to instance task counts if detailed task information is unavailable
+  #             task_count = instance['runningTasksCount'] + instance['pendingTasksCount']
               
-            print('Instance %s has %s tasks' % (instance_arn, task_count))
+  #           print('Instance %s has %s tasks' % (instance_arn, task_count))
 
-            return task_count > 0
+  #           return task_count > 0
 
-          def set_container_instance_to_draining(cluster, instance_arn):
-            ecs.update_container_instances_state(
-                cluster=cluster,
-                containerInstances=[instance_arn], status='DRAINING')
+  #         def set_container_instance_to_draining(cluster, instance_arn):
+  #           ecs.update_container_instances_state(
+  #               cluster=cluster,
+  #               containerInstances=[instance_arn], status='DRAINING')
 
 
-          def pick(dct, *keys):
-            """Pick a subset of a dict."""
-            return {k: v for k, v in dct.items() if k in keys}
-      Role:
-        Fn::GetAtt:
-          - ECSDrainHookFunctionServiceRole
-          - Arn
-      Environment:
-        Variables:
-          CLUSTER:
-            Ref: Cluster
-      Handler: index.lambda_handler
-      Runtime: python3.6
-      Timeout: 310
-    DependsOn:
-      - ECSDrainHookFunctionServiceRoleDefaultPolicy
-      - ECSDrainHookFunctionServiceRole
-  ECSDrainHookFunctionAllowInvokeECSDrainHookTopic:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName:
-        Fn::GetAtt:
-          - ECSDrainHookFunction
-          - Arn
-      Principal: sns.amazonaws.com
-      SourceArn:
-        Ref: ECSDrainHookTopic
-  ECSDrainHookFunctionTopic:
-    Type: AWS::SNS::Subscription
-    Properties:
-      Protocol: lambda
-      TopicArn:
-        Ref: ECSDrainHookTopic
-      Endpoint:
-        Fn::GetAtt:
-          - ECSDrainHookFunction
-          - Arn
-  ECSDrainHookTopic:
-    Type: AWS::SNS::Topic
-  ECSDrainHookRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Action: sts:AssumeRole
-            Effect: Allow
-            Principal:
-              Service: autoscaling.amazonaws.com
-        Version: "2012-10-17"
-  ECSDrainHookRoleDefaultPolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyDocument:
-        Statement:
-          - Action: sns:Publish
-            Effect: Allow
-            Resource:
-              Ref: ECSDrainHookTopic
-        Version: "2012-10-17"
-      PolicyName: ECSDrainHookRoleDefaultPolicy
-      Roles:
-        - Ref: ECSDrainHookRole
-  ECSDrainHook:
-    Type: AWS::AutoScaling::LifecycleHook
-    Properties:
-      AutoScalingGroupName:
-        Ref: EC2AutoScalingGroup
-      LifecycleTransition: autoscaling:EC2_INSTANCE_TERMINATING
-      DefaultResult: CONTINUE
-      HeartbeatTimeout: 300
-      NotificationTargetARN:
-        Ref: ECSDrainHookTopic
-      RoleARN:
-        Fn::GetAtt:
-          - ECSDrainHookRole
-          - Arn
-    DependsOn:
-      - ECSDrainHookRoleDefaultPolicy
-      - ECSDrainHookRole
+  #         def pick(dct, *keys):
+  #           """Pick a subset of a dict."""
+  #           return {k: v for k, v in dct.items() if k in keys}
+  #     Role:
+  #       Fn::GetAtt:
+  #         - ECSDrainHookFunctionServiceRole
+  #         - Arn
+  #     Environment:
+  #       Variables:
+  #         CLUSTER:
+  #           Ref: Cluster
+  #     Handler: index.lambda_handler
+  #     Runtime: python3.6
+  #     Timeout: 310
+  #   DependsOn:
+  #     - ECSDrainHookFunctionServiceRoleDefaultPolicy
+  #     - ECSDrainHookFunctionServiceRole
+  # ECSDrainHookFunctionAllowInvokeECSDrainHookTopic:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     Action: lambda:InvokeFunction
+  #     FunctionName:
+  #       Fn::GetAtt:
+  #         - ECSDrainHookFunction
+  #         - Arn
+  #     Principal: sns.amazonaws.com
+  #     SourceArn:
+  #       Ref: ECSDrainHookTopic
+  # ECSDrainHookFunctionTopic:
+  #   Type: AWS::SNS::Subscription
+  #   Properties:
+  #     Protocol: lambda
+  #     TopicArn:
+  #       Ref: ECSDrainHookTopic
+  #     Endpoint:
+  #       Fn::GetAtt:
+  #         - ECSDrainHookFunction
+  #         - Arn
+  # ECSDrainHookTopic:
+  #   Type: AWS::SNS::Topic
+  # ECSDrainHookRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Statement:
+  #         - Action: sts:AssumeRole
+  #           Effect: Allow
+  #           Principal:
+  #             Service: autoscaling.amazonaws.com
+  #       Version: "2012-10-17"
+  # ECSDrainHookRoleDefaultPolicy:
+  #   Type: AWS::IAM::Policy
+  #   Properties:
+  #     PolicyDocument:
+  #       Statement:
+  #         - Action: sns:Publish
+  #           Effect: Allow
+  #           Resource:
+  #             Ref: ECSDrainHookTopic
+  #       Version: "2012-10-17"
+  #     PolicyName: ECSDrainHookRoleDefaultPolicy
+  #     Roles:
+  #       - Ref: ECSDrainHookRole
+  # ECSDrainHook:
+  #   Type: AWS::AutoScaling::LifecycleHook
+  #   Properties:
+  #     AutoScalingGroupName:
+  #       Ref: EC2AutoScalingGroup
+  #     LifecycleTransition: autoscaling:EC2_INSTANCE_TERMINATING
+  #     DefaultResult: CONTINUE
+  #     HeartbeatTimeout: 300
+  #     NotificationTargetARN:
+  #       Ref: ECSDrainHookTopic
+  #     RoleARN:
+  #       Fn::GetAtt:
+  #         - ECSDrainHookRole
+  #         - Arn
+  #   DependsOn:
+  #     - ECSDrainHookRoleDefaultPolicy
+  #     - ECSDrainHookRole
   pingSNSTopic:
     Type: AWS::SNS::Topic
     Properties:
