@@ -205,23 +205,17 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Automatically created Security Group for the Service
-      {% if service_instance.inputs.loadbalancer_type == 'network' %}
-      SecurityGroupIngress:
-        - CidrIp: 0.0.0.0/0
-          Description: Allow all inbound traffic by default
-          IpProtocol: '-1'
-      {% endif %}
       SecurityGroupEgress:
         - CidrIp: 0.0.0.0/0
           Description: Allow all outbound traffic by default
           IpProtocol: '-1'
       VpcId: '{{environment.outputs.VPC}}'
-  {% if service_instance.inputs.loadbalancer_type == 'application' %}
   ServiceSecurityGroupfromServiceLBSecurityGroup:
     Type: 'AWS::EC2::SecurityGroupIngress'
     Properties:
       IpProtocol: tcp
       Description: Load balancer to target
+      {% if service_instance.inputs.loadbalancer_type == 'application' %}
       FromPort: 80
       GroupId: !GetAtt 
         - ServiceSecurityGroup
@@ -230,7 +224,9 @@ Resources:
         - ServiceLBSecurityGroup
         - GroupId
       ToPort: 80
-  {% endif %}  
+      {% else %}
+      CidrIp: {{environment.outputs.VPC_CIDR}} #Network Load Balancers do not have associated security groups
+      {% endif %}
   ServiceTaskCountTarget:
     Type: 'AWS::ApplicationAutoScaling::ScalableTarget'
     DependsOn: Service
