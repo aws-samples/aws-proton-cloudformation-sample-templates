@@ -176,65 +176,65 @@ Resources:
         Version: 2012-10-17
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
-  # ECSHostSecurityGroup:
-  #   Type: AWS::EC2::SecurityGroup
-  #   Properties:
-  #     SecurityGroupEgress:
-  #       - CidrIp: 0.0.0.0/0
-  #         Description: Allow all outbound traffic by default
-  #         IpProtocol: "-1"
-  #     VpcId:
-  #       Ref: !Ref VPC
-  # ECSHostInstanceRole:
-  #   Type: AWS::IAM::Role
-  #   Properties:
-  #     AssumeRolePolicyDocument:
-  #       Statement:
-  #         - Action: sts:AssumeRole
-  #           Effect: Allow
-  #           Principal:
-  #             Service:
-  #               Fn::Join:
-  #                 - ""
-  #                 - - ec2.
-  #                   - Ref: AWS::URLSuffix
-  #       Version: "2012-10-17"
-  # ECSHostInstanceRoleDefaultPolicy:
-  #   Type: AWS::IAM::Policy
-  #   Properties:
-  #     PolicyDocument:
-  #       Statement:
-  #         - Action:
-  #             - ecs:DeregisterContainerInstance
-  #             - ecs:RegisterContainerInstance
-  #             - ecs:Submit*
-  #           Effect: Allow
-  #           Resource:
-  #             Fn::GetAtt:
-  #               - Cluster
-  #               - Arn
-  #         - Action:
-  #             - ecs:Poll
-  #             - ecs:StartTelemetrySession
-  #           Condition:
-  #             ArnEquals:
-  #               ecs:cluster:
-  #                 Fn::GetAtt:
-  #                   - Cluster
-  #                   - Arn
-  #           Effect: Allow
-  #           Resource: "*"
-  #         - Action:
-  #             - ecs:DiscoverPollEndpoint
-  #             - ecr:GetAuthorizationToken
-  #             - logs:CreateLogStream
-  #             - logs:PutLogEvents
-  #           Effect: Allow
-  #           Resource: "*"
-  #       Version: "2012-10-17"
-  #     PolicyName: ECSHostInstanceRoleDefaultPolicy
-  #     Roles:
-  #       - Ref: ECSHostInstanceRole
+  ECSHostSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      VpcId:
+        Ref: !Ref VPC
+  ECSHostInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                Fn::Join:
+                  - ""
+                  - - ec2.
+                    - Ref: AWS::URLSuffix
+        Version: "2012-10-17"
+  ECSHostInstanceRoleDefaultPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - ecs:DeregisterContainerInstance
+              - ecs:RegisterContainerInstance
+              - ecs:Submit*
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+                - Cluster
+                - Arn
+          - Action:
+              - ecs:Poll
+              - ecs:StartTelemetrySession
+            Condition:
+              ArnEquals:
+                ecs:cluster:
+                  Fn::GetAtt:
+                    - Cluster
+                    - Arn
+            Effect: Allow
+            Resource: "*"
+          - Action:
+              - ecs:DiscoverPollEndpoint
+              - ecr:GetAuthorizationToken
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource: "*"
+        Version: "2012-10-17"
+      PolicyName: ECSHostInstanceRoleDefaultPolicy
+      Roles:
+        - Ref: ECSHostInstanceRole
   # EC2InstanceProfile:
   #   Type: AWS::IAM::InstanceProfile
   #   Properties:
@@ -593,6 +593,6 @@ Outputs:
   CloudMapNamespaceId:
     Description: CloudMap namespace Id
     Value: !GetAtt 'CloudMapNamespace.Id'
-  # EcsHostSecurityGroup:
-  #   Description: A security group used to allow containers to receive traffic
-  #   Value: !Ref 'EcsHostSecurityGroup'
+  EcsHostSecurityGroup:
+    Description: A security group used to allow containers to receive traffic
+    Value: !Ref 'EcsHostSecurityGroup'
