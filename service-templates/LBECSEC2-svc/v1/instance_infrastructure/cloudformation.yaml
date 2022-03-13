@@ -161,10 +161,10 @@ Resources:
           ContainerPort: '{{service_instance.inputs.port}}'
           TargetGroupArn: !Ref ServiceLBPublicListenerECSGroup
       SchedulingStrategy: REPLICA
-      ServiceRegistries:
-        - RegistryArn: !GetAtt 
-            - ServiceCloudmapService
-            - Arn
+      # ServiceRegistries:
+      #   - RegistryArn: !GetAtt 
+      #       - ServiceCloudmapService
+      #       - Arn
       TaskDefinition: !Ref ServiceTaskDef
     DependsOn:
       - ServiceLBPublicListenerECSGroup
