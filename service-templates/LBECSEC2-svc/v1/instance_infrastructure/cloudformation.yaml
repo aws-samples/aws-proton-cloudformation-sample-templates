@@ -157,12 +157,16 @@ Resources:
       HealthCheckGracePeriodSeconds: 60
       LaunchType: EC2
       LoadBalancers:
-        - TargetGroupArn: !Ref ServiceLBPublicListenerECSGroup
+        - ContainerName: '{{service_instance.name}}'
+          ContainerPort: '{{service_instance.inputs.port}}'
+          TargetGroupArn: !Ref ServiceLBPublicListenerECSGroup
       SchedulingStrategy: REPLICA
       ServiceRegistries:
         - RegistryArn: !GetAtt 
             - ServiceCloudmapService
             - Arn
+          ContainerName: '{{service_instance.name}}'
+          ContainerPort: '{{service_instance.inputs.port}}'
       TaskDefinition: !Ref ServiceTaskDef
     DependsOn:
       - ServiceLBPublicListenerECSGroup
