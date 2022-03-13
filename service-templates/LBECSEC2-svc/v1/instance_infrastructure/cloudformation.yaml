@@ -58,8 +58,8 @@ Resources:
       IpProtocol: tcp
       Description: Load balancer to target
       DestinationSecurityGroupId: {{environment.outputs.ECSHostSecurityGroup}}
-      FromPort: 80
-      ToPort: 80
+      FromPort: 32768
+      ToPort: 65535
       {% else %}
       Type: network
       {% endif %}           
@@ -190,8 +190,8 @@ Resources:
       IpProtocol: tcp
       Description: Load balancer to target
       {% if service_instance.inputs.loadbalancer_type == 'application' %}
-      FromPort: 80
-      ToPort: 80
+      FromPort: 32768
+      ToPort: 65535
       GroupId: {{environment.outputs.ECSHostSecurityGroup}}
       SourceSecurityGroupId:
         Fn::GetAtt:
