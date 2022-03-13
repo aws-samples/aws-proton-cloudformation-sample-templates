@@ -189,10 +189,10 @@ Resources:
     Properties:
       IpProtocol: tcp
       Description: Load balancer to target
+      GroupId: {{environment.outputs.ECSHostSecurityGroup}}
       {% if service_instance.inputs.loadbalancer_type == 'application' %}
       FromPort: 32768
       ToPort: 65535
-      GroupId: {{environment.outputs.ECSHostSecurityGroup}}
       SourceSecurityGroupId:
         Fn::GetAtt:
           - ServiceLBSecurityGroup
