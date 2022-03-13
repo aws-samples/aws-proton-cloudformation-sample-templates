@@ -177,7 +177,7 @@ Resources:
       DnsConfig:
         DnsRecords:
           - TTL: 60
-            Type: A
+            Type: SRV
         NamespaceId: '{{environment.outputs.CloudMapNamespaceId}}'
         RoutingPolicy: MULTIVALUE
       HealthCheckCustomConfig:
