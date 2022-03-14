@@ -198,7 +198,7 @@ Resources:
           - ServiceLBSecurityGroup
           - GroupId
       {% else %}
-      CidrIp: {{environment.outputs.VPCCidr}} #Network Load Balancers do not have associated security groups
+      CidrIp: 0.0.0.0/0 #Network Load Balancers do not have associated security groups. See - https://docs.aws.amazon.com/elasticloadbalancing/latest/network/target-group-register-targets.html#target-security-groups
       {% endif %}
   ServiceTaskCountTarget:
     Type: 'AWS::ApplicationAutoScaling::ScalableTarget'
