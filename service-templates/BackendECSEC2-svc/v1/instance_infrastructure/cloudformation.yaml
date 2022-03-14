@@ -43,7 +43,7 @@ Resources:
     Properties:
       ContainerDefinitions:
         - Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
-	  Essential: true
+          Essential: true
           Image: '{{service_instance.inputs.image}}'
           LogConfiguration:
             LogDriver: awslogs
@@ -52,10 +52,10 @@ Resources:
               awslogs-stream-prefix: '{{service.name}}/{{service_instance.name}}'
               awslogs-region: !Ref 'AWS::Region'
           Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
-	  Name: '{{service_instance.name}}'
+          Name: '{{service_instance.name}}'
           PortMappings:
             - ContainerPort: '{{service_instance.inputs.port}}'
-	      HostPort: 0
+              HostPort: 0
               Protocol: tcp
           Environment:
             - Name: SNS_TOPIC_ARN
@@ -84,12 +84,11 @@ Resources:
       EnableECSManagedTags: false
       LaunchType: EC2
       SchedulingStrategy: REPLICA
-
       ServiceRegistries:
         - RegistryArn: !GetAtt 
             - ServiceCloudmapService
             - Arn
-	  ContainerName: '{{service_instance.name}}'
+          ContainerName: '{{service_instance.name}}'
           ContainerPort: '{{service_instance.inputs.port}}'
       TaskDefinition: !Ref ServiceTaskDef
   ServiceCloudmapService:
