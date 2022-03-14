@@ -190,17 +190,15 @@ Resources:
       IpProtocol: tcp
       Description: Load balancer to target
       GroupId: {{environment.outputs.ECSHostSecurityGroup}}
-      {% if service_instance.inputs.loadbalancer_type == 'application' %}
       FromPort: 32768
       ToPort: 65535
+      {% if service_instance.inputs.loadbalancer_type == 'application' %}
       SourceSecurityGroupId:
         Fn::GetAtt:
           - ServiceLBSecurityGroup
           - GroupId
       {% else %}
       CidrIp: 0.0.0.0/0 #Network Load Balancers do not have associated security groups. See - https://docs.aws.amazon.com/elasticloadbalancing/latest/network/target-group-register-targets.html#target-security-groups
-      FromPort: 80
-      ToPort: 80
       {% endif %}
   ServiceTaskCountTarget:
     Type: 'AWS::ApplicationAutoScaling::ScalableTarget'
