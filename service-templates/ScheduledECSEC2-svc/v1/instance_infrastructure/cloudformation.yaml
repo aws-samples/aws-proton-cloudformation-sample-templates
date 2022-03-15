@@ -69,7 +69,7 @@ Resources:
           Environment:
             - Name: SNS_TOPIC_ARN
               Value: '{"ping":"{{environment.outputs.SNSTopic}}"}'
-      	  Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
+          Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
           Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
       ExecutionRoleArn: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
       Family: '{{service.name}}_{{service_instance.name}}'
