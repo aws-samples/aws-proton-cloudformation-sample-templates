@@ -130,8 +130,8 @@ Resources:
           Environment:
             - Name: SNS_TOPIC_ARN
               Value: '{"ping":"{{environment.outputs.SNSTopic}}"}'
-            - Name: BACKEND_URL
-              Value: "{{service_instance.inputs.backendurl}}"
+            - Name: BACKEND_RECORD
+              Value: "{{service_instance.inputs.backend_record}}"
       ExecutionRoleArn: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
       Family: '{{service.name}}_{{service_instance.name}}'
       NetworkMode: bridge

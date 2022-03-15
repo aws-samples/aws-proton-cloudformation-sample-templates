@@ -36,10 +36,10 @@ schema:
           default: "public.ecr.aws/z9d2n7e1/nginx:1.21.0"
           minLength: 1
           maxLength: 200
-        backendurl:
+        backend_record:
           type: string
-          description: "Service discovery url of the backend service"
-          default: "BackendECSEC2-svc-prod.BackendECSEC2-svc.ecsec2-prod-env.local:80"
+          description: "SRV Record name of the backend service"
+          default: "BackendECSEC2-svc-prod.BackendECSEC2-svc.ecs-ec2-prod-env.local"
           minLength: 1
           maxLength: 200
 
