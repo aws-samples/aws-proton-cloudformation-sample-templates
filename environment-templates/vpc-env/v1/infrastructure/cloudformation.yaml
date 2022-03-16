@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: A VPC with two private subnets, two public subnets with NAT gateway, and an internet gateway. 
              Network routing for the public subnets will be configured to allow outbound access directly via an Internet Gateway.
-	     Network routing for the private subnets will be configured to allow outbound access via a set of NAT Gateways.
+             Network routing for the private subnets will be configured to allow outbound access via a set of NAT Gateways.
 
 Mappings:
   # The VPC and subnet configuration is passed in via the environment spec.
