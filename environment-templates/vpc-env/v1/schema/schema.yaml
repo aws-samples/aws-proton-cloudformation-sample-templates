@@ -1,0 +1,34 @@
+schema:
+  format:
+    openapi: "3.0.0"
+  environment_input_type: "PublicEnvironmentInput"
+  types:
+    PublicEnvironmentInput:
+      type: object
+      description: "Input properties for my environment"
+      properties:
+        vpc_cidr:
+          type: string
+          description: "This CIDR range for your VPC"
+          default: 10.0.0.0/16
+          pattern: ([0-9]{1,3}\.){3}[0-9]{1,3}($|/(16|18|24))
+        public_subnet_one_cidr:
+          type: string
+          description: "The CIDR range for public subnet one"
+          default: 10.0.0.0/18
+          pattern: ([0-9]{1,3}\.){3}[0-9]{1,3}($|/(16|18|24))
+        public_subnet_two_cidr:
+          type: string
+          description: "The CIDR range for public subnet two"
+          default: 10.0.64.0/18
+          pattern: ([0-9]{1,3}\.){3}[0-9]{1,3}($|/(16|18|24))
+        private_subnet_one_cidr:
+          type: string
+          description: "The CIDR range for private subnet one"
+          default: 10.0.128.0/18
+          pattern: ([0-9]{1,3}\.){3}[0-9]{1,3}($|/(16|18|24))
+        private_subnet_two_cidr:
+          type: string
+          description: "The CIDR range for private subnet two"
+          default: 10.0.192.0/18
+          pattern: ([0-9]{1,3}\.){3}[0-9]{1,3}($|/(16|18|24))
