@@ -200,3 +200,6 @@ Outputs:
   PrivateSubnet2:
     Description: Private subnet two
     Value: !Ref 'PrivateSubnet2'
+  VPCSecurityGroup:
+    Description: Default security group for Lambda VPC
+    Value: !GetAtt VPC.DefaultSecurityGroup
