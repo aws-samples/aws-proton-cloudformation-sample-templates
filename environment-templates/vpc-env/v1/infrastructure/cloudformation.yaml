@@ -187,7 +187,7 @@ Resources:
       PrivateDnsEnabled: Yes
       SecurityGroupIds: 
         - !GetAtt VPC.DefaultSecurityGroup
-      ServiceName: com.amazonaws.${AWS::Region}.sns
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.sns'
       SubnetIds: 
         - !Ref 'PublicSubnet1'
         - !Ref 'PublicSubnet2'
