@@ -15,7 +15,6 @@ Resources:
   HttpApi:
     Type: AWS::Serverless::HttpApi
     Properties:
-      Name: '{{service_instance.name}}'
       Description: An Amazon API Gateway HTTP API and an AWS Lambda function.
       ProtocolType: HTTP
       CorsConfiguration:
