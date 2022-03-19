@@ -91,3 +91,6 @@ Outputs:
   HttpApiEndpoint:
     Description: The default endpoint for the HTTP API.
     Value: !GetAtt HttpApi.ApiEndpoint
+  LambdaRuntime:
+    Description: The lambda runtime
+    Value: "{{service_instance.inputs.lambda_runtime}}"
