@@ -33,9 +33,10 @@ Resources:
     Type: AWS::Serverless::Function 
     Properties:
       {% if service_instance.inputs.code_uri is defined %}
-      CodeUri: {{service_instance.inputs.code_uri}}
       Handler: {{service_instance.inputs.lambda_handler}}
+      CodeUri: {{service_instance.inputs.code_uri}}
       {% else %}
+      Handler: index.handler
       InlineCode: |
         exports.handler = function(event, context) {
           try {
