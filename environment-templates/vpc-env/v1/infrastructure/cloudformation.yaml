@@ -197,6 +197,9 @@ Outputs:
   SNSTopic:
     Description: The name of the SNS Topic
     Value: !Ref 'pingSNSTopic'
+  SNSTopicName:
+    Description: TopicName of the SNS Topic
+    Value: !GetAtt pingSNSTopic.TopicName
   VPC:
     Description: The ID of the VPC that this stack is deployed in
     Value: !Ref 'VPC'
