@@ -37,6 +37,11 @@ schema:
           description: "The s3 link to your application"
           minLength: 1
           maxLength: 200
+        subnet_type:
+          type: string
+          description: "Subnet type for your service"
+          enum: ["public", "private"]
+          default: "public"
 
     PipelineInputs:
       type: object
