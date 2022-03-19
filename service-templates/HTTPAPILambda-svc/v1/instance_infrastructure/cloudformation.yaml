@@ -38,7 +38,7 @@ Resources:
       {% else %}
       Handler: index.handler
       InlineCode: |
-        exports.handler = async (event, context) {
+        exports.handler = async (event, context) => {
           try {
             // Log event and context object to CloudWatch Logs
             console.log("Event: ", JSON.stringify(event, null, 2));
