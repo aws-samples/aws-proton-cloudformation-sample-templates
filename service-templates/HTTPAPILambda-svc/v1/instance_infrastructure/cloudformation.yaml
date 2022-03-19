@@ -34,6 +34,31 @@ Resources:
     Properties:
       {% if service_instance.inputs.code_uri is defined %}
       CodeUri: {{service_instance.inputs.code_uri}}
+      {% else %}
+      InlineCode: |
+        exports.handler = function(event, context) {
+          try {
+              // Log event and context object to CloudWatch Logs
+              console.log("Event: ", JSON.stringify(event, null, 2));
+              console.log("Context: ", JSON.stringify(context, null, 2));
+
+              // Create event object to return to caller
+              const eventObj = {
+                functionName: context.functionName,
+                method: event.requestContext.http.method,
+                rawPath: event.rawPath,
+              };
+
+              const response = {
+                statusCode: 200,
+                body: JSON.stringify(eventObj, null, 2),
+              };
+              return response;
+            } catch (error) {
+              console.error(error);
+              throw new Error(error);
+            }
+        };
       {% endif %}
       FunctionName: '{{service_instance.name}}-function'
       Handler: '{{service_instance.inputs.lambda_handler}}'
