@@ -4,7 +4,7 @@ Description: Simple Lambda based HTTP service template
 
 Globals:
   Function:
-    CodeUri: {{service_instance.inputs.code_uri}}
+
     Runtime: {{service_instance.inputs.lambda_runtime}}
     MemorySize: {{service_instance.inputs.lambda_memory}}
     Timeout: {{service_instance.inputs.lambda_timeout}}
@@ -33,6 +33,7 @@ Resources:
   LambdaFunction:
     Type: AWS::Serverless::Function 
     Properties:
+      CodeUri: {{service_instance.inputs.code_uri}}
       FunctionName: '{{service_instance.name}}-function'
       Handler: '{{service_instance.inputs.lambda_handler}}'
       Environment:
