@@ -34,6 +34,7 @@ Resources:
     Properties:
       {% if service_instance.inputs.code_uri is defined %}
       CodeUri: {{service_instance.inputs.code_uri}}
+      Handler: {{service_instance.inputs.lambda_handler}}
       {% else %}
       InlineCode: |
         exports.handler = function(event, context) {
@@ -61,7 +62,6 @@ Resources:
         };
       {% endif %}
       FunctionName: '{{service_instance.name}}-function'
-      Handler: '{{service_instance.inputs.lambda_handler}}'
       Environment:
         Variables:
           SNStopic: '{{environment.outputs.SNSTopic}}'
