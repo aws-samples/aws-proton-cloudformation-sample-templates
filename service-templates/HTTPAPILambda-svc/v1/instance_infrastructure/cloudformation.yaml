@@ -4,7 +4,6 @@ Description: Simple Lambda based HTTP service template
 
 Globals:
   Function:
-
     Runtime: {{service_instance.inputs.lambda_runtime}}
     MemorySize: {{service_instance.inputs.lambda_memory}}
     Timeout: {{service_instance.inputs.lambda_timeout}}

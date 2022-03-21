@@ -62,7 +62,7 @@ schema:
         packaging_command:
           type: string
           description: "The commands which packages your code into a file called function.zip"
-          default: "make publish"
+          default: "zip function.zip index.js"
           minLength: 1
           maxLength: 200
         environment_account_ids:
