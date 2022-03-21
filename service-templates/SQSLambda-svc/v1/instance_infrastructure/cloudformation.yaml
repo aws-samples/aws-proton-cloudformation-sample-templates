@@ -101,14 +101,6 @@ Resources:
             - '{{environment.outputs.PublicSubnet1}}'
             - '{{environment.outputs.PublicSubnet2}}'
         {% endif %}
-  # Function permissions grant an AWS service or another account permission to use a function
-  FunctionResourcePermission:
-    Type: 'AWS::Lambda::Permission'
-    Properties:
-      Action: 'lambda:InvokeFunction'
-      Principal: apigateway.amazonaws.com
-      FunctionName: !Ref LambdaFunction
-      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*'
 Outputs:
   LambdaFunction:
     Description: LambdaFunction function name
