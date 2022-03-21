@@ -7,7 +7,7 @@ schema:
   types:
     HTTPServiceInput:
       type: object
-      description: "Input properties for a Lambda backed HTTP API. When given a resource name, this input will be used to generate Create, Read, Update and Delete API methods and lambdas."
+      description: "Input properties for a Lambda backed HTTP API."
       properties:
         lambda_handler:
           type: string
