@@ -1,0 +1,127 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SQS-Lambda based Worker service template
+
+Globals:
+  Function:
+    Runtime: {{service_instance.inputs.lambda_runtime}}
+    MemorySize: {{service_instance.inputs.lambda_memory}}
+    Timeout: {{service_instance.inputs.lambda_timeout}}
+    Tracing: Active
+
+
+Resources:
+  # Define DeadLetter Queue 
+  MyDeadLetterQueue:
+    Type: 'AWS::SQS::Queue'
+    Properties:
+      MessageRetentionPeriod: 1209600
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+  # Define the SQS queue
+  MySqsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt 
+          - MyDeadLetterQueue
+          - Arn
+        maxReceiveCount: 3
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+  QueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref 'MySqsQueue']
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+            Resource: !GetAtt MySqsQueue.Arn
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt MySqsQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: '{{environment.outputs.SNSTopic}}'
+  pingSNSTopicSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: '{{environment.outputs.SNSTopic}}'
+      Protocol: 'sqs'
+      Endpoint: !GetAtt MySqsQueue.Arn
+  # Lambda Function - uses Globals to define additional configuration values
+  # Define the consumer Lambda function
+  LambdaFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      {% if service_instance.inputs.code_uri is defined %}
+      Handler: {{service_instance.inputs.lambda_handler}}
+      CodeUri: {{service_instance.inputs.code_uri}}
+      {% else %}
+      Handler: index.handler
+      InlineCode: |
+        exports.handler = async (event, context) => {
+          try {
+            // Log event and context object to CloudWatch Logs
+            console.log("Event: ", JSON.stringify(event, null, 2));
+            console.log("Context: ", JSON.stringify(context, null, 2));
+            return {};
+          } catch (error) {
+            console.error(error);
+            throw new Error(error);
+          }
+        };
+      {% endif %}
+      FunctionName: '{{service_instance.name}}-function'
+      Events:
+        MySQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt MySqsQueue.Arn
+            BatchSize: 10
+      Policies:
+        - AWSLambdaVPCAccessExecutionRole
+      VpcConfig:
+        SecurityGroupIds:
+          - '{{environment.outputs.VPCSecurityGroup}}'
+        SubnetIds:
+        {% if service_instance.inputs.subnet_type == 'private' %}
+            - '{{environment.outputs.PrivateSubnet1}}'
+            - '{{environment.outputs.PrivateSubnet2}}'
+        {% else %}
+            - '{{environment.outputs.PublicSubnet1}}'
+            - '{{environment.outputs.PublicSubnet2}}'
+        {% endif %}
+  # Function permissions grant an AWS service or another account permission to use a function
+  FunctionResourcePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      Principal: apigateway.amazonaws.com
+      FunctionName: !Ref LambdaFunction
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*'
+Outputs:
+  LambdaFunction:
+    Description: LambdaFunction function name
+    Value: !Ref LambdaFunction
+  SQSqueueName:
+    Description: SNS queue name
+    Value: !GetAtt MySqsQueue.QueueName
+  SQSqueueARN:
+    Description: SQS queue ARN
+    Value: !GetAtt MySqsQueue.Arn
+  SQSqueueURL:
+    Description: SQS queue URL
+    Value: !Ref MySqsQueue
+  LambdaRuntime:
+    Description: The lambda runtime
+    Value: "{{service_instance.inputs.lambda_runtime}}"
