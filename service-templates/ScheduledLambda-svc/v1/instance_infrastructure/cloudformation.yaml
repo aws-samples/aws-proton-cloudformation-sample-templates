@@ -59,6 +59,6 @@ Outputs:
   LambdaFunction:
     Description: LambdaFunction function name
     Value: !Ref LambdaFunction
-   LambdaRuntime:
+  LambdaRuntime:
     Description: The lambda runtime
     Value: "{{service_instance.inputs.lambda_runtime}}"
