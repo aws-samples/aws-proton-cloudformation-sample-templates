@@ -41,7 +41,7 @@ Resources:
           Type: Schedule 
           Properties:
             Schedule: '{{service_instance.inputs.schedule_expression}}'
-	    Enabled: true
+            Enabled: true
       Policies:
         - AWSLambdaVPCAccessExecutionRole
       VpcConfig:
