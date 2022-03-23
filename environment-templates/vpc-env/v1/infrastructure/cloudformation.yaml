@@ -193,6 +193,14 @@ Resources:
         - !Ref 'PublicSubnet2'
       VpcEndpointType: Interface
       VpcId: !Ref VPC
+  ApprunnerVpcConnector:
+    Type: AWS::AppRunner::VpcConnector
+    Properties:
+      VpcConnectorName: '{{environment.name}}-vpc-connector'
+      Subnets:
+        - !Ref 'PublicSubnet1'
+        - !Ref 'PublicSubnet2'
+      SecurityGroups: !GetAtt VPC.DefaultSecurityGroup
 Outputs:
   SNSTopic:
     Description: The name of the SNS Topic
@@ -218,3 +226,6 @@ Outputs:
   VPCSecurityGroup:
     Description: Default security group for Lambda VPC
     Value: !GetAtt VPC.DefaultSecurityGroup
+  VpcConnectorArn:
+    Description: ARN of the VPC connector
+    Value: !GetAtt ApprunnerVpcConnector.VpcConnectorArn
