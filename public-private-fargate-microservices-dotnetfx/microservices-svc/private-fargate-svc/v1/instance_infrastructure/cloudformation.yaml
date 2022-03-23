@@ -39,6 +39,7 @@ Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
+      #TODO: Should this include environment name?
       LogGroupName: '{{service.name}}/{{service_instance.name}}'
 
   # The task definition. This is a simple metadata description of what
@@ -50,10 +51,11 @@ Resources:
       Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
       Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
       NetworkMode: awsvpc
+      # TODO: Add Windows Requirement
       RequiresCompatibilities:
         - FARGATE
       ExecutionRoleArn: '{{environment.outputs.ECSTaskExecutionRole}}'
-      TaskRoleArn: !Ref "AWS::NoValue"
+      TaskRoleArn: !Ref 'AWS::NoValue'
       ContainerDefinitions:
         - Name: '{{service_instance.name}}'
           Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
@@ -79,6 +81,7 @@ Resources:
     Properties:
       ServiceName: '{{service.name}}_{{service_instance.name}}'
       Cluster: '{{environment.outputs.ClusterName}}'
+      # TODO: Add Windows Requirement
       LaunchType: FARGATE
       DesiredCount: '{{service_instance.inputs.desired_count}}'
       NetworkConfiguration:

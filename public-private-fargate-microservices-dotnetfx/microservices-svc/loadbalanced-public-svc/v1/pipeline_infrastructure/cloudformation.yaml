@@ -5,7 +5,7 @@ Resources:
     Properties:
       # This policy allows environment accounts to get the image from ECRRepo in the management account
       RepositoryPolicyText:
-        Version: "2012-10-17"
+        Version: '2012-10-17'
         Statement:
           - Sid: AllowPull
             Effect: Allow
@@ -19,6 +19,7 @@ Resources:
               - ecr:BatchCheckLayerAvailability
               - ecr:GetDownloadUrlForLayer
               - ecr:BatchGetImage
+  # TODO: Need to change to support Windows
   BuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -36,10 +37,7 @@ Resources:
         - Name: service_name
           Type: PLAINTEXT
           Value: '{{service.name}}'
-      ServiceRole:
-        Fn::GetAtt:
-          - PublishRole
-          - Arn
+      ServiceRole: !GetAtt PublishRole.Arn
       Source:
         BuildSpec:
           Fn::Join:
@@ -95,10 +93,7 @@ Resources:
                   }
                 }
         Type: CODEPIPELINE
-      EncryptionKey:
-        Fn::GetAtt:
-          - PipelineArtifactsBucketEncryptionKey
-          - Arn
+      EncryptionKey: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
 {% for service_instance in service_instances %}
   Deploy{{loop.index}}Project:
     Type: AWS::CodeBuild::Project
@@ -117,10 +112,7 @@ Resources:
         - Name: service_instance_name
           Type: PLAINTEXT
           Value: '{{service_instance.name}}'
-      ServiceRole:
-        Fn::GetAtt:
-          - DeploymentRole
-          - Arn
+      ServiceRole: !GetAtt DeploymentRole.Arn
       Source:
         BuildSpec: >-
           {
@@ -136,10 +128,7 @@ Resources:
             }
           }
         Type: CODEPIPELINE
-      EncryptionKey:
-        Fn::GetAtt:
-          - PipelineArtifactsBucketEncryptionKey
-          - Arn
+      EncryptionKey: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
 {% endfor %}
   # This role is used to build and publish an image to ECR
   PublishRole:
@@ -151,7 +140,7 @@ Resources:
             Effect: Allow
             Principal:
               Service: codebuild.amazonaws.com
-        Version: "2012-10-17"
+        Version: '2012-10-17'
   PublishRoleDefaultPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -163,49 +152,19 @@ Resources:
               - logs:PutLogEvents
             Effect: Allow
             Resource:
-              - Fn::Join:
-                  - ""
-                  - - "arn:"
-                    - Ref: AWS::Partition
-                    - ":logs:"
-                    - Ref: AWS::Region
-                    - ":"
-                    - Ref: AWS::AccountId
-                    - :log-group:/aws/codebuild/
-                    - Ref: BuildProject
-              - Fn::Join:
-                  - ""
-                  - - "arn:"
-                    - Ref: AWS::Partition
-                    - ":logs:"
-                    - Ref: AWS::Region
-                    - ":"
-                    - Ref: AWS::AccountId
-                    - :log-group:/aws/codebuild/
-                    - Ref: BuildProject
-                    - :*
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${BuildProject}'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${BuildProject}:*'
           - Action:
               - codebuild:CreateReportGroup
               - codebuild:CreateReport
               - codebuild:UpdateReport
               - codebuild:BatchPutTestCases
             Effect: Allow
-            Resource:
-              Fn::Join:
-                - ""
-                - - "arn:"
-                  - Ref: AWS::Partition
-                  - ":codebuild:"
-                  - Ref: AWS::Region
-                  - ":"
-                  - Ref: AWS::AccountId
-                  - :report-group/
-                  - Ref: BuildProject
-                  - -*
+            Resource: !Sub 'arn:${AWS::Partition}:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/${BuildProject}-*'
           - Action:
               - ecr:GetAuthorizationToken
             Effect: Allow
-            Resource: "*"
+            Resource: '*'
           - Action:
               - ecr:BatchCheckLayerAvailability
               - ecr:CompleteLayerUpload
@@ -214,14 +173,11 @@ Resources:
               - ecr:PutImage
               - ecr:UploadLayerPart
             Effect: Allow
-            Resource:
-              Fn::GetAtt:
-                - ECRRepo
-                - Arn
+            Resource: !GetAtt ECRRepo.Arn
           - Action:
               - proton:GetService
             Effect: Allow
-            Resource: "*"
+            Resource: '*'
           - Action:
               - s3:GetObject*
               - s3:GetBucket*
@@ -231,15 +187,8 @@ Resources:
               - s3:Abort*
             Effect: Allow
             Resource:
-              - Fn::GetAtt:
-                  - PipelineArtifactsBucket
-                  - Arn
-              - Fn::Join:
-                  - ""
-                  - - Fn::GetAtt:
-                        - PipelineArtifactsBucket
-                        - Arn
-                    - /*
+              - !GetAtt PipelineArtifactsBucket.Arn
+              - !Sub '${PipelineArtifactsBucket.Arn}/*'
           - Action:
               - kms:Decrypt
               - kms:DescribeKey
@@ -247,24 +196,17 @@ Resources:
               - kms:ReEncrypt*
               - kms:GenerateDataKey*
             Effect: Allow
-            Resource:
-              Fn::GetAtt:
-                - PipelineArtifactsBucketEncryptionKey
-                - Arn
+            Resource: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
           - Action:
               - kms:Decrypt
               - kms:Encrypt
               - kms:ReEncrypt*
               - kms:GenerateDataKey*
             Effect: Allow
-            Resource:
-              Fn::GetAtt:
-                - PipelineArtifactsBucketEncryptionKey
-                - Arn
-        Version: "2012-10-17"
+            Resource: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
+        Version: '2012-10-17'
       PolicyName: PublishRoleDefaultPolicy
-      Roles:
-        - Ref: PublishRole
+      Roles: !Ref PublishRole
 
   DeploymentRole:
     Type: AWS::IAM::Role
@@ -275,7 +217,7 @@ Resources:
             Effect: Allow
             Principal:
               Service: codebuild.amazonaws.com
-        Version: "2012-10-17"
+        Version: '2012-10-17'
   DeploymentRoleDefaultPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -287,83 +229,43 @@ Resources:
               - logs:PutLogEvents
             Effect: Allow
             Resource:
-              - Fn::Join:
-                  - ""
-                  - - "arn:"
-                    - Ref: AWS::Partition
-                    - ":logs:"
-                    - Ref: AWS::Region
-                    - ":"
-                    - Ref: AWS::AccountId
-                    - :log-group:/aws/codebuild/Deploy*Project*
-              - Fn::Join:
-                  - ""
-                  - - "arn:"
-                    - Ref: AWS::Partition
-                    - ":logs:"
-                    - Ref: AWS::Region
-                    - ":"
-                    - Ref: AWS::AccountId
-                    - :log-group:/aws/codebuild/Deploy*Project:*
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/Deploy*Project*'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/Deploy*Project:*'
           - Action:
               - codebuild:CreateReportGroup
               - codebuild:CreateReport
               - codebuild:UpdateReport
               - codebuild:BatchPutTestCases
             Effect: Allow
-            Resource:
-              Fn::Join:
-                - ""
-                - - "arn:"
-                  - Ref: AWS::Partition
-                  - ":codebuild:"
-                  - Ref: AWS::Region
-                  - ":"
-                  - Ref: AWS::AccountId
-                  - :report-group/Deploy*Project
-                  - -*
+            Resource: !Sub 'arn:${AWS::Partition}:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/Deploy*Project-*'
           - Action:
               - proton:UpdateServiceInstance
               - proton:GetServiceInstance
             Effect: Allow
-            Resource: "*"
+            Resource: '*'
           - Action:
               - s3:GetObject*
               - s3:GetBucket*
               - s3:List*
             Effect: Allow
             Resource:
-              - Fn::GetAtt:
-                  - PipelineArtifactsBucket
-                  - Arn
-              - Fn::Join:
-                  - ""
-                  - - Fn::GetAtt:
-                        - PipelineArtifactsBucket
-                        - Arn
-                    - /*
+              - !GetAtt PipelineArtifactsBucket.Arn
+              - !Sub '${PipelineArtifactsBucket.Arn}/*'
           - Action:
               - kms:Decrypt
               - kms:DescribeKey
             Effect: Allow
-            Resource:
-              Fn::GetAtt:
-                - PipelineArtifactsBucketEncryptionKey
-                - Arn
+            Resource: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
           - Action:
               - kms:Decrypt
               - kms:Encrypt
               - kms:ReEncrypt*
               - kms:GenerateDataKey*
             Effect: Allow
-            Resource:
-              Fn::GetAtt:
-                - PipelineArtifactsBucketEncryptionKey
-                - Arn
-        Version: "2012-10-17"
+            Resource: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
+        Version: '2012-10-17'
       PolicyName: DeploymentRoleDefaultPolicy
-      Roles:
-        - Ref: DeploymentRole
+      Roles: !Ref DeploymentRole
   PipelineArtifactsBucketEncryptionKey:
     Type: AWS::KMS::Key
     Properties:
@@ -387,15 +289,8 @@ Resources:
               - kms:UntagResource
             Effect: Allow
             Principal:
-              AWS:
-                Fn::Join:
-                  - ""
-                  - - "arn:"
-                    - Ref: AWS::Partition
-                    - ":iam::"
-                    - Ref: AWS::AccountId
-                    - :root
-            Resource: "*"
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Resource: '*'
           - Action:
               - kms:Decrypt
               - kms:DescribeKey
@@ -404,11 +299,8 @@ Resources:
               - kms:GenerateDataKey*
             Effect: Allow
             Principal:
-              AWS:
-                Fn::GetAtt:
-                  - PipelineRole
-                  - Arn
-            Resource: "*"
+              AWS: !GetAtt PipelineRole.Arn
+            Resource: '*'
           - Action:
               - kms:Decrypt
               - kms:DescribeKey
@@ -417,11 +309,8 @@ Resources:
               - kms:GenerateDataKey*
             Effect: Allow
             Principal:
-              AWS:
-                Fn::GetAtt:
-                  - PublishRole
-                  - Arn
-            Resource: "*"
+              AWS: !GetAtt PublishRole.Arn
+            Resource: '*'
           - Action:
               - kms:Decrypt
               - kms:Encrypt
@@ -429,21 +318,15 @@ Resources:
               - kms:GenerateDataKey*
             Effect: Allow
             Principal:
-              AWS:
-                Fn::GetAtt:
-                  - PublishRole
-                  - Arn
-            Resource: "*"
+              AWS: !GetAtt: PublishRole.Arn
+            Resource: '*'
           - Action:
               - kms:Decrypt
               - kms:DescribeKey
             Effect: Allow
             Principal:
-              AWS:
-                Fn::GetAtt:
-                  - DeploymentRole
-                  - Arn
-            Resource: "*"
+              AWS: !GetAtt DeploymentRole.Arn
+            Resource: '*'
           - Action:
               - kms:Decrypt
               - kms:Encrypt
@@ -451,12 +334,9 @@ Resources:
               - kms:GenerateDataKey*
             Effect: Allow
             Principal:
-              AWS:
-                Fn::GetAtt:
-                  - DeploymentRole
-                  - Arn
-            Resource: "*"
-        Version: "2012-10-17"
+              AWS: !GetAtt DeploymentRole.Arn
+            Resource: '*'
+        Version: '2012-10-17'
     UpdateReplacePolicy: Delete
     DeletionPolicy: Delete
   PipelineArtifactsBucket:
@@ -467,10 +347,7 @@ Resources:
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
-              KMSMasterKeyID:
-                Fn::GetAtt:
-                  - PipelineArtifactsBucketEncryptionKey
-                  - Arn
+              KMSMasterKeyID: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
               SSEAlgorithm: aws:kms
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
@@ -483,10 +360,7 @@ Resources:
     Type: AWS::KMS::Alias
     Properties:
       AliasName: 'alias/codepipeline-encryption-key-{{ service.name }}'
-      TargetKeyId:
-        Fn::GetAtt:
-          - PipelineArtifactsBucketEncryptionKey
-          - Arn
+      TargetKeyId: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
     UpdateReplacePolicy: Delete
     DeletionPolicy: Delete
   PipelineRole:
@@ -498,7 +372,7 @@ Resources:
             Effect: Allow
             Principal:
               Service: codepipeline.amazonaws.com
-        Version: "2012-10-17"
+        Version: '2012-10-17'
   PipelineRoleDefaultPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -513,15 +387,8 @@ Resources:
               - s3:Abort*
             Effect: Allow
             Resource:
-              - Fn::GetAtt:
-                  - PipelineArtifactsBucket
-                  - Arn
-              - Fn::Join:
-                  - ""
-                  - - Fn::GetAtt:
-                        - PipelineArtifactsBucket
-                        - Arn
-                    - /*
+              - !GetAtt PipelineArtifactsBucket.Arn
+              - !Sub '${PipelineArtifactsBucket.Arn}/*'
           - Action:
               - kms:Decrypt
               - kms:DescribeKey
@@ -529,43 +396,30 @@ Resources:
               - kms:ReEncrypt*
               - kms:GenerateDataKey*
             Effect: Allow
-            Resource:
-              Fn::GetAtt:
-                - PipelineArtifactsBucketEncryptionKey
-                - Arn
+            Resource: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
           - Action: codestar-connections:*
             Effect: Allow
-            Resource: "*"
+            Resource: '*'
           - Action: sts:AssumeRole
             Effect: Allow
-            Resource:
-              Fn::GetAtt:
-                - PipelineBuildCodePipelineActionRole
-                - Arn
+            Resource: !GetAtt PipelineBuildCodePipelineActionRole.Arn
           - Action: sts:AssumeRole
             Effect: Allow
-            Resource:
-              Fn::GetAtt:
-                - PipelineDeployCodePipelineActionRole
-                - Arn
-        Version: "2012-10-17"
+            Resource: !GetAtt PipelineDeployCodePipelineActionRole.Arn
+        Version: '2012-10-17'
       PolicyName: PipelineRoleDefaultPolicy
-      Roles:
-        - Ref: PipelineRole
+      Roles: !Ref PipelineRole
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      RoleArn:
-        Fn::GetAtt:
-          - PipelineRole
-          - Arn
+      RoleArn: !GetAtt PipelineRole.Arn
       Stages:
         - Actions:
             - ActionTypeId:
                 Category: Source
                 Owner: AWS
                 Provider: CodeStarSourceConnection
-                Version: "1"
+                Version: 1
               Configuration:
                 ConnectionArn: '{{ service.repository_connection_arn }}'
                 FullRepositoryId: '{{ service.repository_id }}'
@@ -580,19 +434,15 @@ Resources:
                 Category: Build
                 Owner: AWS
                 Provider: CodeBuild
-                Version: "1"
+                Version: 1
               Configuration:
-                ProjectName:
-                  Ref: BuildProject
+                ProjectName: !Ref BuildProject
               InputArtifacts:
                 - Name: Artifact_Source_Checkout
               Name: Build
               OutputArtifacts:
                 - Name: BuildOutput
-              RoleArn:
-                Fn::GetAtt:
-                  - PipelineBuildCodePipelineActionRole
-                  - Arn
+              RoleArn: !GetAtt PipelineBuildCodePipelineActionRole.Arn
               RunOrder: 1
           Name: Build {%- for service_instance in service_instances %}
         - Actions:
@@ -600,29 +450,21 @@ Resources:
                 Category: Build
                 Owner: AWS
                 Provider: CodeBuild
-                Version: "1"
+                Version: 1
               Configuration:
-                ProjectName:
-                  Ref: Deploy{{loop.index}}Project
+                ProjectName: !Ref Deploy{{loop.index}}Project
               InputArtifacts:
                 - Name: BuildOutput
               Name: Deploy
-              RoleArn:
-                Fn::GetAtt:
-                  - PipelineDeployCodePipelineActionRole
-                  - Arn
+              RoleArn: !GetAtt PipelineDeployCodePipelineActionRole.Arn
               RunOrder: 1
           Name: 'Deploy{{service_instance.name}}'
 {%- endfor %}
       ArtifactStore:
         EncryptionKey:
-          Id:
-            Fn::GetAtt:
-              - PipelineArtifactsBucketEncryptionKey
-              - Arn
+          Id: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
           Type: KMS
-        Location:
-          Ref: PipelineArtifactsBucket
+        Location: !Ref PipelineArtifactsBucket
         Type: S3
     DependsOn:
       - PipelineRoleDefaultPolicy
@@ -635,15 +477,8 @@ Resources:
           - Action: sts:AssumeRole
             Effect: Allow
             Principal:
-              AWS:
-                Fn::Join:
-                  - ""
-                  - - "arn:"
-                    - Ref: AWS::Partition
-                    - ":iam::"
-                    - Ref: AWS::AccountId
-                    - :root
-        Version: "2012-10-17"
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+        Version: '2012-10-17'
   PipelineBuildCodePipelineActionRoleDefaultPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -654,14 +489,10 @@ Resources:
               - codebuild:StartBuild
               - codebuild:StopBuild
             Effect: Allow
-            Resource:
-              Fn::GetAtt:
-                - BuildProject
-                - Arn
-        Version: "2012-10-17"
+            Resource: !GetAtt BuildProject.Arn
+        Version: '2012-10-17'
       PolicyName: PipelineBuildCodePipelineActionRoleDefaultPolicy
-      Roles:
-        - Ref: PipelineBuildCodePipelineActionRole
+      Roles: !Ref PipelineBuildCodePipelineActionRole
   PipelineDeployCodePipelineActionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -670,15 +501,8 @@ Resources:
           - Action: sts:AssumeRole
             Effect: Allow
             Principal:
-              AWS:
-                Fn::Join:
-                  - ""
-                  - - "arn:"
-                    - Ref: AWS::Partition
-                    - ":iam::"
-                    - Ref: AWS::AccountId
-                    - :root
-        Version: "2012-10-17"
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+        Version: '2012-10-17'
   PipelineDeployCodePipelineActionRoleDefaultPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -689,21 +513,11 @@ Resources:
               - codebuild:StartBuild
               - codebuild:StopBuild
             Effect: Allow
-            Resource:
-              Fn::Join:
-                - ""
-                - - "arn:"
-                  - Ref: AWS::Partition
-                  - ":codebuild:"
-                  - Ref: AWS::Region
-                  - ":"
-                  - Ref: AWS::AccountId
-                  - ":project/Deploy*"
-        Version: "2012-10-17"
+            Resource: !Sub 'arn:${AWS::Partition}:codebuild:${AWS::Region}:${AWS::AccountId}:project/Deploy*'
+        Version: '2012-10-17'
       PolicyName: PipelineDeployCodePipelineActionRoleDefaultPolicy
-      Roles:
-        - Ref: PipelineDeployCodePipelineActionRole
+      Roles: !Ref PipelineDeployCodePipelineActionRole
 Outputs:
   PipelineEndpoint:
     Description: The URL to access the pipeline
-    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/codesuite/codepipeline/pipelines/${Pipeline}/view?region=${AWS::Region}"
+    Value: !Sub https://${AWS::Region}.console.aws.amazon.com/codesuite/codepipeline/pipelines/${Pipeline}/view?region=${AWS::Region}'

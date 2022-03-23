@@ -40,6 +40,7 @@ Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
+      #TODO: Should this include environment name?
       LogGroupName: '{{service.name}}/{{service_instance.name}}'
 
   # The task definition. This is a simple metadata description of what
@@ -54,7 +55,7 @@ Resources:
       RequiresCompatibilities:
         - FARGATE
       ExecutionRoleArn: '{{environment.outputs.ECSTaskExecutionRole}}'
-      TaskRoleArn: !Ref "AWS::NoValue"
+      TaskRoleArn: !Ref 'AWS::NoValue'
       ContainerDefinitions:
         - Name: '{{service_instance.name}}'
           Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
@@ -75,6 +76,7 @@ Resources:
   # The service_instance.inputs. The service is a resource which allows you to run multiple
   # copies of a type of task, and gather up their logs and metrics, as well
   # as monitor the number of running tasks and replace any that have crashed
+  # TODO: Need to sepcify Windows constraint
   Service:
     Type: AWS::ECS::Service
     DependsOn: LoadBalancerRule
@@ -153,34 +155,19 @@ Resources:
     Properties:
       ServiceNamespace: 'ecs'
       ScalableDimension: 'ecs:service:DesiredCount'
-      ResourceId:
-        Fn::Join:
-          - '/'
-          - - service
-            - '{{environment.outputs.ClusterName}}'
-            - '{{service.name}}_{{service_instance.name}}'
+      ResourceId: !Sub 'service/{{environment.outputs.ClusterName}}/{{service.name}}_{{service_instance.name}}'
       MinCapacity: 1
       MaxCapacity: 10
-      RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
+      RoleARN: !Sub 'arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService'
 
   # Create scaling policies for the service
   ScaleDownPolicy:
     Type: AWS::ApplicationAutoScaling::ScalingPolicy
     DependsOn: ScalableTarget
     Properties:
-      PolicyName:
-        Fn::Join:
-          - '/'
-          - - scale
-            - '{{service.name}}_{{service_instance.name}}'
-            - down
+      PolicyName: !Sub 'scale/{{service.name}}_{{service_instance.name}}/down'
       PolicyType: StepScaling
-      ResourceId:
-        Fn::Join:
-          - '/'
-          - - service
-            - '{{environment.outputs.ClusterName}}'
-            - '{{service.name}}_{{service_instance.name}}'
+      ResourceId: !Sub 'service/{{environment.outputs.ClusterName}}/{{service.name}}_{{service_instance.name}}'
       ScalableDimension: 'ecs:service:DesiredCount'
       ServiceNamespace: 'ecs'
       StepScalingPolicyConfiguration:
@@ -195,19 +182,9 @@ Resources:
     Type: AWS::ApplicationAutoScaling::ScalingPolicy
     DependsOn: ScalableTarget
     Properties:
-      PolicyName:
-        Fn::Join:
-          - '/'
-          - - scale
-            - '{{service.name}}_{{service_instance.name}}'
-            - up
+      PolicyName: !Sub 'scale/{{service.name}}_{{service_instance.name}}/up'
       PolicyType: StepScaling
-      ResourceId:
-        Fn::Join:
-          - '/'
-          - - service
-            - '{{environment.outputs.ClusterName}}'
-            - '{{service.name}}_{{service_instance.name}}'
+      ResourceId: !Sub 'service/{{environment.outputs.ClusterName}}/{{service.name}}_{{service_instance.name}}'
       ScalableDimension: 'ecs:service:DesiredCount'
       ServiceNamespace: 'ecs'
       StepScalingPolicyConfiguration:
@@ -228,16 +205,8 @@ Resources:
   LowCpuUsageAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName:
-        Fn::Join:
-          - '-'
-          - - low-cpu
-            - '{{service.name}}_{{service_instance.name}}'
-      AlarmDescription:
-        Fn::Join:
-          - ' '
-          - - "Low CPU utilization for service"
-            - '{{service.name}}_{{service_instance.name}}'
+      AlarmName: !Sub 'low-cpu-{{service.name}}_{{service_instance.name}}'
+      AlarmDescription: !Sub 'Low CPU utilization for service {{service.name}}_{{service_instance.name}}'
       MetricName: CPUUtilization
       Namespace: AWS/ECS
       Dimensions:
@@ -257,16 +226,8 @@ Resources:
   HighCpuUsageAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName:
-        Fn::Join:
-          - '-'
-          - - high-cpu
-            - '{{service.name}}_{{service_instance.name}}'
-      AlarmDescription:
-        Fn::Join:
-          - ' '
-          - - "High CPU utilization for service"
-            - '{{service.name}}_{{service_instance.name}}'
+      AlarmName: !Sub 'high-cpu-{{service.name}}_{{service_instance.name}}'
+      AlarmDescription: !Sub 'High CPU utilization for service {{service.name}}_{{service_instance.name}}'
       MetricName: CPUUtilization
       Namespace: AWS/ECS
       Dimensions:
@@ -288,7 +249,7 @@ Resources:
     Properties:
       Description: Ingress from the public ALB
       GroupId: '{{environment.outputs.ContainerSecurityGroup}}'
-      IpProtocol: -1
+      IpProtocol: '-1'
       SourceSecurityGroupId: !Ref 'PublicLoadBalancerSG'
 
   # Public load balancer, hosted in public subnets that is accessible
@@ -303,7 +264,8 @@ Resources:
       SecurityGroupIngress:
           # Allow access to ALB from anywhere on the internet
           - CidrIp: 0.0.0.0/0
-            IpProtocol: -1
+            #TODO: Should this be narrowed down?
+            IpProtocol: '-1'
       Tags:
         - Key: Name
           Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
@@ -340,7 +302,7 @@ Resources:
 Outputs:
   ServiceEndpoint:
     Description: The URL to access the service
-    Value: !Sub "http://${PublicLoadBalancer.DNSName}"
+    Value: !Sub 'http://${PublicLoadBalancer.DNSName}'
   ServiceDiscovery:
     Description: The registered service discovery Service Id
     Value: !Ref DiscoveryService
