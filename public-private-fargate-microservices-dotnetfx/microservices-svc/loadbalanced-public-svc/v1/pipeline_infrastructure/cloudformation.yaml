@@ -39,59 +39,39 @@ Resources:
           Value: '{{service.name}}'
       ServiceRole: !GetAtt PublishRole.Arn
       Source:
-        BuildSpec:
-          Fn::Join:
-            - ""
-            - - >-
-                {
-                  "version": "0.2",
-                  "phases": {
-                    "install": {
-                      "runtime-versions": {
-                        "docker": 18
-                      },
-                      "commands": [
-                        "pip3 install --upgrade --user awscli",
-                        "echo 'f6bd1536a743ab170b35c94ed4c7c4479763356bd543af5d391122f4af852460  yq_linux_amd64' > yq_linux_amd64.sha",
-                        "wget https://github.com/mikefarah/yq/releases/download/3.4.0/yq_linux_amd64",
-                        "sha256sum -c yq_linux_amd64.sha",
-                        "mv yq_linux_amd64 /usr/bin/yq",
-                        "chmod +x /usr/bin/yq"
-                      ]
-                    },
-                    "pre_build": {
-                      "commands": [
-                        "cd $CODEBUILD_SRC_DIR",
-                        "$(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)",
-                        "{{ pipeline.inputs.unit_test_command }}",
-                      ]
-                    },
-                    "build": {
-                      "commands": [
-                        "IMAGE_REPO_NAME=$repo_name",
-                        "IMAGE_TAG=$CODEBUILD_BUILD_NUMBER",
-                        "IMAGE_ID=
-              - Ref: AWS::AccountId
-              - >-
-                .dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG",
-                        "docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG -f {{ pipeline.inputs.dockerfile }} .",
-                        "docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $IMAGE_ID;",
-                        "docker push $IMAGE_ID"
-                      ]
-                    },
-                    "post_build": {
-                      "commands": [
-                        "aws proton --region $AWS_DEFAULT_REGION get-service --name $service_name | jq -r .service.spec > service.yaml",
-                        "yq w service.yaml 'instances[*].spec.image' \"$IMAGE_ID\" > rendered_service.yaml"
-                      ]
-                    }
-                  },
-                  "artifacts": {
-                    "files": [
-                      "rendered_service.yaml"
-                    ]
-                  }
-                }
+        BuildSpec: !Sub |
+          version: "0.2"
+          phases:
+            install:
+              runtime-versions:
+                docker: 18
+              commands:
+                - pip3 install --upgrade --user awscli
+                - echo 'f6bd1536a743ab170b35c94ed4c7c4479763356bd543af5d391122f4af852460  yq_linux_amd64' > yq_linux_amd64.sha
+                - wget https://github.com/mikefarah/yq/releases/download/3.4.0/yq_linux_amd64
+                - sha256sum -c yq_linux_amd64.sha
+                - mv yq_linux_amd64 /usr/bin/yq
+                - chmod +x /usr/bin/yq
+            pre_build:
+              commands:
+                - cd $CODEBUILD_SRC_DIR
+                - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)
+                - {{ pipeline.inputs.unit_test_command }}
+            build:
+              commands:
+                - IMAGE_REPO_NAME=$repo_name
+                - IMAGE_TAG=$CODEBUILD_BUILD_NUMBER
+                - IMAGE_ID=${AWS::AccountId}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+                - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG -f {{ pipeline.inputs.dockerfile }} .
+                - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $IMAGE_ID;
+                - docker push $IMAGE_ID
+            post_build:
+              commands:
+                - aws proton --region $AWS_DEFAULT_REGION get-service --name $service_name | jq -r .service.spec > service.yaml
+                - yq w service.yaml 'instances[*].spec.image' "$IMAGE_ID" > rendered_service.yaml
+          artifacts:
+            files:
+              - rendered_service.yaml
         Type: CODEPIPELINE
       EncryptionKey: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
 {% for service_instance in service_instances %}
@@ -114,19 +94,14 @@ Resources:
           Value: '{{service_instance.name}}'
       ServiceRole: !GetAtt DeploymentRole.Arn
       Source:
-        BuildSpec: >-
-          {
-            "version": "0.2",
-            "phases": {
-              "build": {
-                "commands": [
-                  "pip3 install --upgrade --user awscli",
-                  "aws proton --region $AWS_DEFAULT_REGION update-service-instance --deployment-type CURRENT_VERSION --name $service_instance_name --service-name $service_name --spec file://rendered_service.yaml",
-                  "aws proton --region $AWS_DEFAULT_REGION wait service-instance-deployed --name $service_instance_name --service-name $service_name"
-                ]
-              }
-            }
-          }
+        BuildSpec: |
+          version: "0.2"
+          phases:
+            build:
+              commands:
+                - pip3 install --upgrade --user awscli
+                - aws proton --region $AWS_DEFAULT_REGION update-service-instance --deployment-type CURRENT_VERSION --name $service_instance_name --service-name $service_name --spec file://rendered_service.yaml
+                - aws proton --region $AWS_DEFAULT_REGION wait service-instance-deployed --name $service_instance_name --service-name $service_name
         Type: CODEPIPELINE
       EncryptionKey: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
 {% endfor %}
