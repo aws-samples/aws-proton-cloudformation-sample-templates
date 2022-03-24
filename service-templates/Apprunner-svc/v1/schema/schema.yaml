@@ -26,6 +26,12 @@ schema:
           default: "public.ecr.aws/z9d2n7e1/nginx:1.21.0"
           minLength: 1
           maxLength: 200
+        repository_type:
+          type: string
+          description: "Type of the image repository for Apprunner"
+          enum: ["ECR", "ECR_PUBLIC"]
+          default: "ECR_PUBLIC"
+
 
     PipelineInputs:
       type: object

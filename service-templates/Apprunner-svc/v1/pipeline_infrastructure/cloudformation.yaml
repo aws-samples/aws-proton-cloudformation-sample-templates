@@ -87,7 +87,8 @@ Resources:
                     "post_build": {
                       "commands": [
                         "aws proton --region $AWS_DEFAULT_REGION get-service --name $service_name | jq -r .service.spec > service.yaml",
-                        "yq w service.yaml 'instances[*].spec.image' \"$IMAGE_ID\" > rendered_service.yaml"
+                        "yq w service.yaml 'instances[*].spec.image' \"$IMAGE_ID\" > service.yaml",
+                        "yq w service.yaml 'instances[*].spec.repository_type' \"ECR\" > rendered_service.yaml"
                       ]
                     }
                   },

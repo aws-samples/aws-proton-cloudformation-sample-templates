@@ -67,7 +67,7 @@ Resources:
               - Name: SNS_TOPIC_ARN
                 Value: '{"ping":"{{environment.outputs.SNSTopic}}"}'
           ImageIdentifier: '{{service_instance.inputs.image}}'
-          ImageRepositoryType: ECR_PUBLIC
+          ImageRepositoryType: '{{service_instance.inputs.repository_type}}'
       InstanceConfiguration:
         Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
         Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
