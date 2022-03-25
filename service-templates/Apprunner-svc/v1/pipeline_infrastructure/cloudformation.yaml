@@ -1,6 +1,6 @@
 Resources:
   ECRRepo:
-    Type: AWS::ECR::PublicRepository
+    Type: AWS::ECR::Repository
     DeletionPolicy: Retain
     {% if pipeline.inputs.environment_account_ids %}
     Properties:
@@ -88,7 +88,6 @@ Resources:
                       "commands": [
                         "aws proton --region $AWS_DEFAULT_REGION get-service --name $service_name | jq -r .service.spec > service.yaml",
                         "yq w service.yaml 'instances[*].spec.image' \"$IMAGE_ID\" > rendered_service.yaml",
-                        # "yq w image_update.yaml 'instances[*].spec.repository_type' \"ECR\" > rendered_service.yaml",
                       ]
                     }
                   },

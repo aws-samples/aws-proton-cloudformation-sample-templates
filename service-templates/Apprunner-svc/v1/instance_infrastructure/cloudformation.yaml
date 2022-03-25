@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Deploy a Backend service on AWS Fargate, hosted in a public or private subnet, 
-             and accessible via Service Discovery.
+Description: Deploy an Request-driven Web Service based on AWS App Runner.
+
 Mappings:
   TaskSize:
     medium:
@@ -56,10 +56,16 @@ Resources:
       PolicyName: ServiceAccessRoleDefaultPolicy
       Roles:
         - Ref: ServiceAccessRole
+  {% if service_instance.inputs.image is defined %}
   Service:
     Type: AWS::AppRunner::Service
     Properties:
       SourceConfiguration:
+        AuthenticationConfiguration:
+          AccessRoleArn:
+            Fn::GetAtt:
+              - ServiceAccessRole
+              - Arn
         ImageRepository:
           ImageConfiguration:
             Port: '{{service_instance.inputs.port}}'
@@ -67,7 +73,7 @@ Resources:
               - Name: SNS_TOPIC_ARN
                 Value: '{"ping":"{{environment.outputs.SNSTopic}}"}'
           ImageIdentifier: '{{service_instance.inputs.image}}'
-          ImageRepositoryType: '{{service_instance.inputs.repository_type}}'
+          ImageRepositoryType: ECR
       InstanceConfiguration:
         Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
         Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
@@ -89,5 +95,4 @@ Outputs:
           - Fn::GetAtt:
               - Service
               - ServiceUrl
-
-
+  {% endif %}

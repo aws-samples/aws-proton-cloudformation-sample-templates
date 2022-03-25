@@ -1,11 +1,11 @@
 schema:
   format:
     openapi: "3.0.0"
-  service_input_type: "BackendFargateServiceInput"
+  service_input_type: "ApprunnerServiceInput"
   pipeline_input_type: "PipelineInputs"
 
   types:
-    BackendFargateServiceInput:
+    ApprunnerServiceInput:
       type: object
       description: "Input properties for a loadbalanced Fargate service"
       properties:
@@ -23,15 +23,8 @@ schema:
         image:
           type: string
           description: "The name/url of the container image"
-          default: "public.ecr.aws/z9d2n7e1/nginx:1.21.0"
           minLength: 1
           maxLength: 200
-        repository_type:
-          type: string
-          description: "Type of the image repository for Apprunner"
-          enum: ["ECR", "ECR_PUBLIC"]
-          default: "ECR_PUBLIC"
-
 
     PipelineInputs:
       type: object
