@@ -1,9 +1,9 @@
 schema:
   format:
     openapi: "3.0.0"
-  environment_input_type: "PublicEnvironmentInput"
+  environment_input_type: "VPCEnvironmentInput"
   types:
-    PublicEnvironmentInput:
+    VPCEnvironmentInput:
       type: object
       description: "Input properties for my environment"
       properties:

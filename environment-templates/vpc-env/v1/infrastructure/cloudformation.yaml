@@ -225,7 +225,7 @@ Outputs:
     Description: Private subnet two
     Value: !Ref 'PrivateSubnet2'
   VPCSecurityGroup:
-    Description: Default security group for Lambda VPC
+    Description: Default security group for VPC
     Value: !GetAtt VPC.DefaultSecurityGroup
   VpcConnectorArn:
     Description: ARN of the VPC connector

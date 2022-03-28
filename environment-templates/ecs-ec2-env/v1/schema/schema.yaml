@@ -1,9 +1,9 @@
 schema:
   format:
     openapi: "3.0.0"
-  environment_input_type: "PublicEnvironmentInput"
+  environment_input_type: "EC2EnvironmentInput"
   types:
-    PublicEnvironmentInput:
+    EC2EnvironmentInput:
       type: object
       description: "Input properties for my environment"
       properties:
