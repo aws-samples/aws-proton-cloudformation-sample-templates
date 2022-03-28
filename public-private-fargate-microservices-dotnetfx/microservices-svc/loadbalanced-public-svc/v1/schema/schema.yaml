@@ -48,6 +48,7 @@ schema:
           description: AMI ID or SSM Parameter expression to use to retrieve the AMI ID for the build server. Must be compatible with operating system version used by ECS cluster.
           default: /aws/service/ami-windows-latest/Windows_Server-2019-English-Core-ECS_Optimized/image_id
         build_server_instance_type:
+          type: string
           default: t2.medium
           enum: [t2.small, t2.medium, t2.large, 
                  t3.small, t3.medium, t3.large,
