@@ -40,8 +40,7 @@ Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      #TODO: Should this include environment name?
-      LogGroupName: '{{service.name}}/{{service_instance.name}}'
+      LogGroupName: '{{environment.name}}/{{service.name}}/{{service_instance.name}}'
 
   # The task definition. This is a simple metadata description of what
   # container to run, and what resource requirements it has.
@@ -54,6 +53,9 @@ Resources:
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
+      RuntimePlatform:
+        CpuArchitecture: 'X86_64'
+        OperatingSystemFamily: 'WINDOWS_SERVER_2019_CORE'
       ExecutionRoleArn: '{{environment.outputs.ECSTaskExecutionRole}}'
       TaskRoleArn: !Ref 'AWS::NoValue'
       ContainerDefinitions:
@@ -76,7 +78,6 @@ Resources:
   # The service_instance.inputs. The service is a resource which allows you to run multiple
   # copies of a type of task, and gather up their logs and metrics, as well
   # as monitor the number of running tasks and replace any that have crashed
-  # TODO: Need to sepcify Windows constraint
   Service:
     Type: AWS::ECS::Service
     DependsOn: LoadBalancerRule
@@ -87,7 +88,7 @@ Resources:
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 75
-      DesiredCount: '{{service_instance.inputs.desired_count}}'
+      DesiredCount: {{service_instance.inputs.desired_count}}
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
@@ -101,7 +102,7 @@ Resources:
       - RegistryArn: !GetAtt DiscoveryService.Arn
       LoadBalancers:
         - ContainerName: '{{service_instance.name}}'
-          ContainerPort: '{{service_instance.inputs.port}}'
+          ContainerPort: {{service_instance.inputs.port}}
           TargetGroupArn: !Ref 'TargetGroup'
       Tags:
         - Key: Name
@@ -249,7 +250,7 @@ Resources:
     Properties:
       Description: Ingress from the public ALB
       GroupId: '{{environment.outputs.ContainerSecurityGroup}}'
-      IpProtocol: '-1'
+      IpProtocol: 'tcp'
       SourceSecurityGroupId: !Ref 'PublicLoadBalancerSG'
 
   # Public load balancer, hosted in public subnets that is accessible
@@ -264,8 +265,7 @@ Resources:
       SecurityGroupIngress:
           # Allow access to ALB from anywhere on the internet
           - CidrIp: 0.0.0.0/0
-            #TODO: Should this be narrowed down?
-            IpProtocol: '-1'
+            IpProtocol: 'tcp'
       Tags:
         - Key: Name
           Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
