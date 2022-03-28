@@ -5,12 +5,6 @@ Mappings:
     Environment:
       Name: '{{environment.name}}'
   TaskSize:
-    x-small:
-      cpu: 256
-      memory: 512
-    small:
-      cpu: 512
-      memory: 1024
     medium:
       cpu: 1024
       memory: 2048
@@ -68,9 +62,9 @@ Resources:
           LogConfiguration:
             LogDriver: 'awslogs'
             Options:
-              awslogs-group: '{{service.name}}/{{service_instance.name}}'
+              awslogs-group: '{{environment.name}}/{{service.name}}/{{service_instance.name}}'
               awslogs-region: !Ref 'AWS::Region'
-              awslogs-stream-prefix: '{{service.name}}/{{service_instance.name}}'
+              awslogs-stream-prefix: '{{environment.name}}/{{service.name}}/{{service_instance.name}}'
       Tags:
         - Key: Name
           Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
@@ -250,7 +244,7 @@ Resources:
     Properties:
       Description: Ingress from the public ALB
       GroupId: '{{environment.outputs.ContainerSecurityGroup}}'
-      IpProtocol: 'tcp'
+      IpProtocol: '-1'
       SourceSecurityGroupId: !Ref 'PublicLoadBalancerSG'
 
   # Public load balancer, hosted in public subnets that is accessible
@@ -265,7 +259,7 @@ Resources:
       SecurityGroupIngress:
           # Allow access to ALB from anywhere on the internet
           - CidrIp: 0.0.0.0/0
-            IpProtocol: 'tcp'
+            IpProtocol: '-1'
       Tags:
         - Key: Name
           Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']

@@ -23,11 +23,12 @@ schema:
         task_size:
           type: string
           description: "The size of the task you want to run"
-          enum: ["x-small", "small", "medium", "large", "x-large"]
-          default: "x-small"
+          enum: [ "medium", "large", "x-large"]
+          default: "medium"
         image:
           type: string
           description: "The name/url of the container image"
+          default: "mcr.microsoft.com/dotnet/framework/samples:aspnetapp"
           minLength: 1
           maxLength: 200
         service_discovery_name:
