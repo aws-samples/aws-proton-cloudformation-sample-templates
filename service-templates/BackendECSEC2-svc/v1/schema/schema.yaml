@@ -39,7 +39,7 @@ schema:
         service_dir:
           type: string
           description: "Source directory for the service"
-          default: "BackendFargate-svc"
+          default: "ecs-backend"
           minLength: 1
           maxLength: 100
         dockerfile:

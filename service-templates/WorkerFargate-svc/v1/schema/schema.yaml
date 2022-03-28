@@ -38,7 +38,7 @@ schema:
         service_dir:
           type: string
           description: "Source directory for the service"
-          default: "WorkerFargate-svc"
+          default: "ecs-worker"
           minLength: 1
           maxLength: 100
         dockerfile:

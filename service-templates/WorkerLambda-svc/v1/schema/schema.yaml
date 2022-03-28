@@ -50,7 +50,7 @@ schema:
         code_dir:
           type: string
           description: "Source directory for the service"
-          default: "WorkerLambda-svc"
+          default: "lambda-worker"
           minLength: 1
           maxLength: 100
         unit_test_command:

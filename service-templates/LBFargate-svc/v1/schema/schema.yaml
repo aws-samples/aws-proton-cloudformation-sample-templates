@@ -44,7 +44,7 @@ schema:
         backendurl:
           type: string
           description: "Service discovery url of the backend service"
-          default: "BackendFargate-svc-prod.BackendFargate-svc.fargate-prod-env.local:80"
+          default: "BackendFargate-svc-prod.BackendFargate-svc.fargate-env-prod.local:80"
           minLength: 1
           maxLength: 200
 
@@ -55,7 +55,7 @@ schema:
         service_dir:
           type: string
           description: "Source directory for the service"
-          default: "LBFargate-svc"
+          default: "ecs-static-website"
           minLength: 1
           maxLength: 100
         dockerfile:

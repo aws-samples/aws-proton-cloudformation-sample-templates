@@ -44,7 +44,7 @@ schema:
         service_dir:
           type: string
           description: "Source directory for the service"
-          default: "ScheduledFargate-svc"
+          default: "ecs-ping-sns"
           minLength: 1
           maxLength: 100
         dockerfile:

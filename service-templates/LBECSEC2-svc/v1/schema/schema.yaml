@@ -50,7 +50,7 @@ schema:
         service_dir:
           type: string
           description: "Source directory for the service"
-          default: "LBFargate-svc"
+          default: "ecs-static-website"
           minLength: 1
           maxLength: 100
         dockerfile:
