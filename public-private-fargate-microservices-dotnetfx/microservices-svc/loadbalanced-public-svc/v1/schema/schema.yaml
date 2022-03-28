@@ -53,10 +53,12 @@ schema:
                  t3.small, t3.medium, t3.large,
                  t3a.small, t3a.medium, t3a.large ]
         build_server_volume_type:
+          type: number
           default: 30
           minimum: 4
           maximum: 1024
         build_server_volume_size:
+          type: string
           default: gp3
           enum: [ gp3, gp2 ]
         dockerfile:
