@@ -1,11 +1,11 @@
 schema:
   format:
     openapi: "3.0.0"
-  service_input_type: "SQSLambdaServiceInput"
+  service_input_type: "WorkerLambdaServiceInput"
   pipeline_input_type: "PipelineInputs"
 
   types:
-    SQSLambdaServiceInput:
+    WorkerLambdaServiceInput:
       type: object
       description: "Input properties for a SQS-Lambda based Worker service."
       properties:

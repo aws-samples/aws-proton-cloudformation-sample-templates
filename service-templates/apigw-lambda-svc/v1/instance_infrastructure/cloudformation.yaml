@@ -27,7 +27,7 @@ Resources:
           - POST
       Target: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${LambdaFunction}/invocations
   # Lambda Function - uses Globals to define additional configuration values
-  # Define the publisher Lambda function with permissions\
+  # Define the publisher Lambda function with permissions
   LambdaFunction:
     Type: AWS::Serverless::Function 
     Properties:
