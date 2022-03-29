@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Deploy a ECS service on EC2, hosted in a public or private subnet, 
+Description: Deploy an ECS service on EC2, hosted in a public or private subnet, 
              and accessible via a public load balancer.
 Mappings:
   TaskSize:

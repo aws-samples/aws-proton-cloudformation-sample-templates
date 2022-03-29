@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Deploy a scheduled Fargate task that will be initiated off of CloudWatch Events.
+Description: Deploy a scheduled ECS task on EC2 that will be initiated off of CloudWatch Events.
 
 Mappings:
   TaskSize:
@@ -20,7 +20,7 @@ Mappings:
       memory: 8192
 
 Resources:
-  ScheduledFargateTaskScheduledEventRule:
+  ScheduledECSEC2TaskScheduledEventRule:
     Type: 'AWS::Events::Rule'
     Properties:
       ScheduleExpression: '{{service_instance.inputs.schedule_expression}}'
@@ -28,34 +28,14 @@ Resources:
       Targets:
         - Arn: '{{environment.outputs.ClusterArn}}'
           EcsParameters:
-            LaunchType: FARGATE
-            NetworkConfiguration:
-              AwsVpcConfiguration:
-              {% if service_instance.inputs.subnet_type == 'private' %}
-                AssignPublicIp: DISABLED
-              {% else %}
-                AssignPublicIp: ENABLED
-              {% endif %}
-                SecurityGroups:
-                  - !GetAtt 
-                    - ScheduledFargateTaskScheduledTaskDefSecurityGroup
-                    - GroupId
-                Subnets:
-                {% if service_instance.inputs.subnet_type == 'private' %}
-                  - '{{environment.outputs.PrivateSubnet1}}'
-                  - '{{environment.outputs.PrivateSubnet2}}'
-                {% else %}
-                  - '{{environment.outputs.PublicSubnet1}}'
-                  - '{{environment.outputs.PublicSubnet2}}'
-                {% endif %}
             TaskCount: '{{service_instance.inputs.desired_count}}'
-            TaskDefinitionArn: !Ref ScheduledFargateTaskScheduledTaskDef
+            TaskDefinitionArn: !Ref ScheduledECSEC2TaskScheduledTaskDef
           Id: Target0
           Input: '{}'
           RoleArn: !GetAtt 
-            - ScheduledFargateTaskScheduledTaskDefEventsRole
+            - ScheduledECSEC2TaskScheduledTaskDefEventsRole
             - Arn
-  ScheduledFargateTaskScheduledTaskDefTaskRole:
+  ScheduledECSEC2TaskScheduledTaskDefTaskRole:
     Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
@@ -73,7 +53,7 @@ Resources:
               - Effect: 'Allow'
                 Action: 'sns:Publish'
                 Resource: '{{environment.outputs.SNSTopic}}'
-  ScheduledFargateTaskScheduledTaskDef:
+  ScheduledECSEC2TaskScheduledTaskDef:
     Type: 'AWS::ECS::TaskDefinition'
     Properties:
       ContainerDefinitions:
@@ -89,21 +69,23 @@ Resources:
           Environment:
             - Name: SNS_TOPIC_ARN
               Value: '{"ping":"{{environment.outputs.SNSTopic}}"}'
-      Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
+            - Name: SNS_REGION
+              Value: "{{environment.outputs.SNSRegion}}"
+          Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
+          Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
       ExecutionRoleArn: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
       Family: '{{service.name}}_{{service_instance.name}}'
-      Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
-      NetworkMode: awsvpc
+      NetworkMode: bridge
       RequiresCompatibilities:
-        - FARGATE
+        - EC2
       TaskRoleArn: !GetAtt 
-        - ScheduledFargateTaskScheduledTaskDefTaskRole
+        - ScheduledECSEC2TaskScheduledTaskDefTaskRole
         - Arn
   ScheduledTaskDefLogGroup:
     Type: 'AWS::Logs::LogGroup'
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain
-  ScheduledFargateTaskScheduledTaskDefEventsRole:
+  ScheduledECSEC2TaskScheduledTaskDefEventsRole:
     Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
@@ -113,7 +95,7 @@ Resources:
             Principal:
               Service: events.amazonaws.com
         Version: 2012-10-17
-  ScheduledFargateTaskScheduledTaskDefEventsRoleDefaultPolicy:
+  ScheduledECSEC2TaskScheduledTaskDefEventsRoleDefaultPolicy:
     Type: 'AWS::IAM::Policy'
     Properties:
       PolicyDocument:
@@ -123,25 +105,16 @@ Resources:
               ArnEquals:
                 'ecs:cluster': '{{environment.outputs.ClusterArn}}'
             Effect: Allow
-            Resource: !Ref ScheduledFargateTaskScheduledTaskDef
+            Resource: !Ref ScheduledECSEC2TaskScheduledTaskDef
           - Action: 'iam:PassRole'
             Effect: Allow
             Resource: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
           - Action: 'iam:PassRole'
             Effect: Allow
             Resource: !GetAtt 
-              - ScheduledFargateTaskScheduledTaskDefTaskRole
+              - ScheduledECSEC2TaskScheduledTaskDefTaskRole
               - Arn
         Version: 2012-10-17
-      PolicyName: ScheduledFargateTaskScheduledTaskDefEventsRoleDefaultPolicy
+      PolicyName: ScheduledECSEC2TaskScheduledTaskDefEventsRoleDefaultPolicy
       Roles:
-        - !Ref ScheduledFargateTaskScheduledTaskDefEventsRole
-  ScheduledFargateTaskScheduledTaskDefSecurityGroup:
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      GroupDescription: Automatically created Security Group for the Task
-      SecurityGroupEgress:
-        - CidrIp: 0.0.0.0/0
-          Description: Allow all outbound traffic by default
-          IpProtocol: '-1'
-      VpcId: '{{environment.outputs.VPC}}'
+        - !Ref ScheduledECSEC2TaskScheduledTaskDefEventsRole
