@@ -7,7 +7,7 @@ schema:
   types:
     BackendFargateServiceInput:
       type: object
-      description: "Input properties for a loadbalanced Fargate service"
+      description: "Input properties for a Backend Fargate service"
       properties:
         port:
           type: number

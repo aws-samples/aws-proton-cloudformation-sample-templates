@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Deploy a Backend service on AWS Fargate, hosted in a public or private subnet, 
-             and accessible via Service Discovery.
+             and accessible via Service Discovery A Record.
 Mappings:
   TaskSize:
     x-small:
@@ -57,6 +57,8 @@ Resources:
           Environment:
             - Name: SNS_TOPIC_ARN
               Value: '{"ping":"{{environment.outputs.SNSTopic}}"}'
+            - Name: SNS_REGION
+              Value: "{{environment.outputs.SNSRegion}}"
       Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
       ExecutionRoleArn: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
       Family: '{{service.name}}_{{service_instance.name}}'

@@ -7,7 +7,7 @@ schema:
   types:
     BackendECSEC2ServiceInput:
       type: object
-      description: "Input properties for a loadbalanced ECSEC2 service"
+      description: "Input properties for a Backend ECSEC2 service"
       properties:
         port:
           type: number
