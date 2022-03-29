@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Deploy a service on AWS Fargate service to implement asynchronous 
-             service-to-service communication with pub/sub architectures.
+             service-to-service communication with pub/sub architecture.
 Mappings:
   TaskSize:
     x-small:
