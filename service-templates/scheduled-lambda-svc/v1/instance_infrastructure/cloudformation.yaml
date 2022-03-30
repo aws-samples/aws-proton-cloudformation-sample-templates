@@ -42,8 +42,13 @@ Resources:
           Properties:
             Schedule: '{{service_instance.inputs.schedule_expression}}'
             Enabled: true
+      Environment:
+        Variables:
+          SNStopic: '{{environment.outputs.SNSTopic}}'
       Policies:
         - AWSLambdaVPCAccessExecutionRole
+        - SNSPublishMessagePolicy:
+            TopicName: '{{environment.outputs.SNSTopicName}}'
       VpcConfig:
         SecurityGroupIds:
           - '{{environment.outputs.VPCSecurityGroup}}'
