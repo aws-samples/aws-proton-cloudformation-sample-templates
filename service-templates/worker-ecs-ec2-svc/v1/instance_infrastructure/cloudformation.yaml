@@ -106,6 +106,8 @@ Resources:
                 - QueueName
             - Name: QUEUE_URI
               Value: !Ref ServiceEcsProcessingQueue
+            - Name: QUEUE_REGION
+              Value: !Ref 'AWS::Region'
           Essential: true
           Image: '{{service_instance.inputs.image}}'
           LogConfiguration:
