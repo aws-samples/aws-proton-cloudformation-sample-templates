@@ -1,11 +1,11 @@
 schema:
   format:
     openapi: "3.0.0"
-  service_input_type: "LoadBalancedServiceInput"
+  service_input_type: "PrivateServiceInput"
   pipeline_input_type: "PipelineInputs"
 
   types:
-    LoadBalancedServiceInput:
+    PrivateServiceInput:
       type: object
       description: "Input properties for a loadbalanced Fargate service"
       properties:
