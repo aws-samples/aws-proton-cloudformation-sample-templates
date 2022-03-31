@@ -9,6 +9,11 @@ schema:
       type: object
       description: "Input properties for a loadbalanced Fargate service"
       properties:
+        cluster_operating_system_family:
+          type: string
+          description: "The operating system used for the ECS Task Definition"
+          default: WINDOWS_SERVER_2019_CORE
+          enum: ['WINDOWS_SERVER_2019_CORE', 'WINDOWS_SERVER_2019_FULL', 'WINDOWS_SERVER_2022_CORE', 'WINDOWS_SERVER_2022_FULL']
         port:
           type: number
           description: "The port to route traffic to"
@@ -43,11 +48,6 @@ schema:
       type: object
       description: "Pipeline input properties"
       properties:
-        cluster_operating_system_family:
-          type: string
-          description: "The operating system used for the ECS Task Definition"
-          default: WINDOWS_SERVER_2019_CORE
-          enum: ['WINDOWS_SERVER_2019_CORE', 'WINDOWS_SERVER_2019_FULL', 'WINDOWS_SERVER_2022_CORE', 'WINDOWS_SERVER_2022_FULL']
         build_server_ami_id:
           type: string
           description: SSM Parameter expression to use to retrieve the AMI ID for the build server. Must be compatible with operating system version used by ECS cluster.
