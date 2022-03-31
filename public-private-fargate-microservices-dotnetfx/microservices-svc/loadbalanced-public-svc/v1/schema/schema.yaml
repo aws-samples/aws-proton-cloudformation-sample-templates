@@ -37,7 +37,6 @@ schema:
           minLength: 3
           maxLength: 24
       required:
-        - image
         - service_discovery_name
 
     PipelineInputs:
@@ -54,12 +53,12 @@ schema:
           enum: [t2.small, t2.medium, t2.large, 
                  t3.small, t3.medium, t3.large,
                  t3a.small, t3a.medium, t3a.large ]
-        build_server_volume_type:
+        build_server_volume_size:
           type: number
           default: 30
           minimum: 4
           maximum: 1024
-        build_server_volume_size:
+        build_server_volume_type:
           type: string
           default: gp3
           enum: [ gp3, gp2 ]
@@ -68,4 +67,3 @@ schema:
           description: "The location of the Dockerfile to build"
           default: "Dockerfile"
           minLength: 1
-          maxLength: 100

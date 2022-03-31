@@ -34,7 +34,7 @@ Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: '{{environment.name}}/{{service.name}}/{{service_instance.name}}'
+      LogGroupName: '{{service.name}}/{{service_instance.name}}'
 
   # The task definition. This is a simple metadata description of what
   # container to run, and what resource requirements it has.
@@ -62,9 +62,9 @@ Resources:
           LogConfiguration:
             LogDriver: 'awslogs'
             Options:
-              awslogs-group: '{{environment.name}}/{{service.name}}/{{service_instance.name}}'
+              awslogs-group: '{{service.name}}/{{service_instance.name}}'
               awslogs-region: !Ref 'AWS::Region'
-              awslogs-stream-prefix: '{{environment.name}}/{{service.name}}/{{service_instance.name}}'
+              awslogs-stream-prefix: '{{service.name}}/{{service_instance.name}}'
       Tags:
         - Key: Name
           Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
