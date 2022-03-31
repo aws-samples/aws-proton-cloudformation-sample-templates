@@ -1,18 +1,18 @@
 schema:
   format:
     openapi: "3.0.0"
-  service_input_type: "PrivateServiceInput"
+  service_input_type: "LoadBalancedServiceInput"
   pipeline_input_type: "PipelineInputs"
 
   types:
-    PrivateServiceInput:
+    LoadBalancedServiceInput:
       type: object
-      description: "Input properties for a Private Fargate service"
+      description: "Input properties for a loadbalanced Fargate service"
       properties:
         port:
           type: number
           description: "The port to route traffic to"
-          default: 8080
+          default: 80
           minimum: 0
           maximum: 65535
         desired_count:
@@ -23,11 +23,12 @@ schema:
         task_size:
           type: string
           description: "The size of the task you want to run"
-          enum: ["x-small", "small", "medium", "large", "x-large"]
-          default: "x-small"
+          enum: [ "medium", "large", "x-large"]
+          default: "medium"
         image:
           type: string
           description: "The name/url of the container image"
+          default: "mcr.microsoft.com/dotnet/framework/samples:aspnetapp"
           minLength: 1
           maxLength: 200
         service_discovery_name:
@@ -36,22 +37,41 @@ schema:
           minLength: 3
           maxLength: 24
       required:
-        - image
         - service_discovery_name
 
     PipelineInputs:
       type: object
       description: "Pipeline input properties"
       properties:
+        cluster_operating_system_family:
+          type: string
+          description: "The operating system used for the ECS Task Definition"
+          default: WINDOWS_SERVER_2019_CORE
+          enum: ['WINDOWS_SERVER_2019_CORE', 'WINDOWS_SERVER_2019_FULL', 'WINDOWS_SERVER_2022_CORE', 'WINDOWS_SERVER_2022_FULL']
+        build_server_ami_id:
+          type: string
+          description: SSM Parameter expression to use to retrieve the AMI ID for the build server. Must be compatible with operating system version used by ECS cluster.
+          default: /aws/service/ami-windows-latest/Windows_Server-2019-English-Core-ECS_Optimized/image_id
+        build_server_instance_type:
+          type: string
+          description: "Instance type used for the EC2 Instance that serves as the build server."
+          default: t2.medium
+          enum: [t2.small, t2.medium, t2.large, 
+                 t3.small, t3.medium, t3.large,
+                 t3a.small, t3a.medium, t3a.large ]
+        build_server_volume_size:
+          type: number
+          description: "Volume size in GiBs used when provisioning the build server."
+          default: 30
+          minimum: 4
+          maximum: 1024
+        build_server_volume_type:
+          type: string
+          description: "Volume type used when provisioning the build server."
+          default: gp3
+          enum: [ gp3, gp2 ]
         dockerfile:
           type: string
           description: "The location of the Dockerfile to build"
           default: "Dockerfile"
           minLength: 1
-          maxLength: 100
-        unit_test_command:
-          type: string
-          description: "The command to run to unit test the application code"
-          default: "echo 'add your unit test command here'"
-          minLength: 1
-          maxLength: 200

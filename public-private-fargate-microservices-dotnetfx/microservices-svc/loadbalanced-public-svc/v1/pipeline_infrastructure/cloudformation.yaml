@@ -6,11 +6,6 @@ Mappings:
       VolumeSize: {{pipeline.inputs.build_server_volume_size}}
     ImageBuild:
       Dockerfile: '{{pipeline.inputs.dockerfile}}'
-Parameters:
-  BuildServerAmiId:
-    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
-    Description: AMI ID or SSM Parameter expression to use to retrieve the AMI ID for the build server. Must be compatible with operating system version used by ECS cluster.
-    Default: '{{pipeline.inputs.build_server_ami_id}}'
 Resources:
   ECRRepo:
     Type: AWS::ECR::Repository
@@ -104,7 +99,7 @@ Resources:
         parameters:
           AmiId:
             type: String
-            default: !Ref BuildServerAmiId
+            default: "{{'{{'}}ssm:{{pipeline.inputs.build_server_ami_id}}{{'}}'}}"
             description: The Windows Server AMI to use for the build server must match version used by ECS cluster.
           DockerFile:
             type: String

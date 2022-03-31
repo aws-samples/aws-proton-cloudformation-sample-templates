@@ -49,7 +49,7 @@ Resources:
         - FARGATE
       RuntimePlatform:
         CpuArchitecture: 'X86_64'
-        OperatingSystemFamily: 'WINDOWS_SERVER_2019_CORE'
+        OperatingSystemFamily: '{{service_instance.inputs.cluster_operating_system_family}}'
       ExecutionRoleArn: '{{environment.outputs.ECSTaskExecutionRole}}'
       TaskRoleArn: !Ref 'AWS::NoValue'
       ContainerDefinitions:
