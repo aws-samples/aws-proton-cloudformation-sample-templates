@@ -7,7 +7,7 @@ schema:
   types:
     PrivateServiceInput:
       type: object
-      description: "Input properties for a loadbalanced Fargate service"
+      description: "Input properties for a Private Fargate service"
       properties:
         port:
           type: number
