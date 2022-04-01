@@ -15,21 +15,6 @@ Mappings:
       cpu: 4096
       memory: 8192
 Resources:
-  # Register service in ServiceDiscovery Service
-  DiscoveryService:
-    Type: AWS::ServiceDiscovery::Service
-    Properties:
-      Description: Discovery Service for the Demo Application
-      DnsConfig:
-        RoutingPolicy: MULTIVALUE
-        DnsRecords:
-          - TTL: 60
-            Type: A
-      HealthCheckCustomConfig:
-        FailureThreshold: 1
-      Name: '{{service_instance.inputs.service_discovery_name}}'
-      NamespaceId: '{{environment.outputs.PrivateNamespace}}'
-
   # A log group for storing the stdout logs from this service's containers
   LogGroup:
     Type: AWS::Logs::LogGroup
@@ -92,8 +77,6 @@ Resources:
             - '{{environment.outputs.PublicSubnetOne}}'
             - '{{environment.outputs.PublicSubnetTwo}}'
       TaskDefinition: !Ref 'TaskDefinition'
-      ServiceRegistries:
-      - RegistryArn: !GetAtt DiscoveryService.Arn
       LoadBalancers:
         - ContainerName: '{{service_instance.name}}'
           ContainerPort: {{service_instance.inputs.port}}
@@ -297,6 +280,4 @@ Outputs:
   ServiceEndpoint:
     Description: The URL to access the service
     Value: !Sub 'http://${PublicLoadBalancer.DNSName}'
-  ServiceDiscovery:
-    Description: The registered service discovery Service Id
-    Value: !Ref DiscoveryService
+
