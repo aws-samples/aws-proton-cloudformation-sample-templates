@@ -1,7 +1,7 @@
 proton: ServiceSpec
 
 pipeline:
-  unit_test_command: "ls"
+  build_server_instance_type: "t3.medium"
 
 instances:
   - name: "backend-dev"
