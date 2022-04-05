@@ -1,0 +1,832 @@
+Mappings:
+  BuildConfig:
+    BuildServer:
+      InstanceType: '{{pipeline.inputs.build_server_instance_type}}'
+      VolumeType: '{{pipeline.inputs.build_server_volume_type}}'
+      VolumeSize: {{pipeline.inputs.build_server_volume_size}}
+    ImageBuild:
+      Dockerfile: '{{pipeline.inputs.dockerfile}}'
+Resources:
+  ECRRepo:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      # This policy allows environment accounts to get the image from ECRRepo in the management account
+      RepositoryPolicyText:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowPull
+            Effect: Allow
+            Principal:
+              AWS:
+                {% for service_instance in service_instances %}
+                - "arn:aws:iam::{{service_instance.environment.account_id}}:root"
+                {% endfor %}
+            Action:
+              - ecr:GetAuthorizationToken
+              - ecr:BatchCheckLayerAvailability
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+  ContainerImageBuildServerRole: 
+    Type : AWS::IAM::Role
+    Properties:
+      Path: /
+      ManagedPolicyArns:
+      - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore'
+      - !Sub 'arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy'
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: "Allow"
+          Principal:
+            Service:
+            - "ec2.amazonaws.com"
+            - "ssm.amazonaws.com"
+          Action: "sts:AssumeRole"
+  ContainerImageBuildServerRoleDefaultPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ContainerImageBuildServerRoleDefaultPolicy
+      Roles: [!Ref ContainerImageBuildServerRole ]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action: s3:GetObject
+            Resource: !Sub arn:${AWS::Partition}:s3:::${PipelineArtifactsBucket}/*
+            Effect: Allow
+          - Action:
+            - kms:Decrypt
+            - kms:Encrypt
+            - kms:ReEncrypt*
+            - kms:GenerateDataKey*
+            Effect: Allow
+            Resource: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
+          - Action:
+            - "ecr:GetAuthorizationToken"
+            Resource: "*"
+            Effect: Allow
+          - Action:
+            - "ecr:BatchCheckLayerAvailability"
+            - "ecr:BatchGetImage"
+            - "ecr:CompleteLayerUpload"
+            - "ecr:DescribeImages"
+            - "ecr:DescribeImageScanFindings"
+            - "ecr:DescribeRepositories"
+            - "ecr:GetDownloadUrlForLayer"
+            - "ecr:GetLifecyclePolicy"
+            - "ecr:GetLifecyclePolicyPreview"
+            - "ecr:GetRepositoryPolicy"
+            - "ecr:InitiateLayerUpload"
+            - "ecr:ListImages"
+            - "ecr:ListTagsForResource"
+            - "ecr:PutImage"
+            - "ecr:UploadLayerPart"
+            Resource: !GetAtt ECRRepo.Arn
+            Effect: Allow
+  ContainerImageBuildServerInstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Roles:
+      - !Ref ContainerImageBuildServerRole
+  BuildDotNetContainerDocument:
+    Type: AWS::SSM::Document
+    Properties:
+      DocumentType: Automation
+      Content:
+        schemaVersion: "0.3"
+        description: "Create a .NET Framework Container for CodeBuild"
+        parameters:
+          AmiId:
+            type: String
+            default: "{{'{{'}}ssm:{{pipeline.inputs.build_server_ami_id}}{{'}}'}}"
+            description: The Windows Server AMI to use for the build server must match version used by ECS cluster.
+          DockerFile:
+            type: String
+            default: !FindInMap ['BuildConfig', 'ImageBuild', 'Dockerfile']
+            description: Location of the Dockerfile relative to repository's root folder
+          InstanceType:
+            type: String
+            description: (Optional) The instance type of the EC2 instance to be launched.
+            default: !FindInMap ['BuildConfig', 'BuildServer', 'InstanceType']
+          IamInstanceProfileName:
+            type: String
+            description: (Required) The IAM instance profile to attach to the build instance.
+            default: !Ref ContainerImageBuildServerInstanceProfile
+          InstanceVolumeSize:
+            type: String
+            description: (Required) Desired volume size (GiB) of the build instance.
+            default: !FindInMap ['BuildConfig', 'BuildServer', 'VolumeSize']
+          InstanceVolumeType:
+            type: String
+            description: (Required) Desired volume type of the build instance.
+            default: !FindInMap ['BuildConfig', 'BuildServer', 'VolumeType']
+          PipelineBucketName:
+            type: String
+            description: (Required) Bucket that build artifact is stored in.
+            default: !Ref PipelineArtifactsBucket
+          SourceArtifactS3Path: 
+            type: String
+            description: (Required) Build artifact key.
+          EcrRepoName: 
+            default: !Ref ECRRepo
+            description: "ECR Repo Name"
+            type: "String"
+          ImageTag:
+            type: String
+            description: (Optional) Tag for container image.
+            default: latest
+          BuildLogGroupName:
+            type: String
+            description: (Optional) CloudWatch Log Group Name for build.
+        mainSteps:
+        {% raw %}
+        - name: createNewInstance
+          action: 'aws:runInstances'
+          maxAttempts: 3
+          timeoutSeconds: 1200
+          onFailure: Abort
+          inputs:
+            ImageId: '{{ AmiId }}'
+            InstanceType: '{{ InstanceType }}'
+            MinInstanceCount: 1
+            MaxInstanceCount: 1
+            IamInstanceProfileName: '{{ IamInstanceProfileName }}'
+            BlockDeviceMappings:
+              - DeviceName: /dev/xvdb
+                Ebs:
+                  VolumeSize: '{{ InstanceVolumeSize }}'
+                  VolumeType: '{{ InstanceVolumeType }}'
+            TagSpecifications:
+            - ResourceType: instance
+              Tags:
+              - Key: tag:aws:cloudformation:stack-id
+                Value: !Ref AWS::StackId
+              - Key: tag:aws:cloudformation:stack-name
+                Value: !Ref AWS::StackName
+              - Key: Name
+                Value: dotnetfx-container-build
+          nextStep: getInstance
+        - name: getInstance
+          action: 'aws:executeAwsApi'
+          maxAttempts: 2
+          onFailure: Abort
+          inputs:
+            Service: ec2
+            Api: DescribeInstances
+            InstanceIds:
+              - '{{ createNewInstance.InstanceIds }}'
+          outputs:
+            - Name: InstanceId
+              Selector: '$.Reservations[0].Instances[0].InstanceId'
+              Type: String
+          isCritical: 'true'
+          nextStep: waitForInstanceToBeReady
+        - name: waitForInstanceToBeReady
+          action: 'aws:waitForAwsResourceProperty'
+          onFailure: 'step:terminateInstance'
+          timeoutSeconds: 600
+          maxAttempts: 2
+          inputs:
+            Service: ec2
+            Api: DescribeInstanceStatus
+            InstanceIds:
+              - '{{ getInstance.InstanceId }}'
+            PropertySelector: '$.InstanceStatuses[0].InstanceStatus.Details[0].Status'
+            DesiredValues:
+              - passed
+          isCritical: 'false'
+          nextStep: waitForSSMAgentOnline
+        - name: waitForSSMAgentOnline
+          action: 'aws:waitForAwsResourceProperty'
+          onFailure: 'step:terminateInstance'
+          timeoutSeconds: 600
+          inputs:
+            Service: ssm
+            Api: DescribeInstanceInformation
+            InstanceInformationFilterList:
+              - key: InstanceIds
+                valueSet:
+                  - '{{ getInstance.InstanceId }}'
+            PropertySelector: '$.InstanceInformationList[0].PingStatus'
+            DesiredValues:
+              - Online
+          isCritical: 'true'
+          nextStep: CreateDockerImage
+        - name: CreateDockerImage
+          action: 'aws:runCommand'
+          onFailure: 'step:terminateInstance'
+          timeoutSeconds: 7200
+          inputs:
+            DocumentName: AWS-RunPowerShellScript
+            InstanceIds:
+              - '{{ getInstance.InstanceId }}'
+            Parameters:
+              commands: |
+                $ErrorActionPreference = "Stop"
+                                
+                Write-Host "*****Downloading from S3...*****"
+                
+                New-Item -Name tmp -ItemType directory -Force | out-null
+                New-Item -Name tmp\src -ItemType directory -Force | out-null
+                
+                cd .\tmp
+
+                $tmpFolder = $(Get-Location).Path
+                $srcFolder = "$tmpFolder\src"
+                $key = "{{SourceArtifactS3Path}}"
+                $srcFileName = "$(Split-Path $key -Leaf)"
+
+                # Expand-Archive requires '.zip' file extension so add it if necessary
+                if ([System.IO.Path]::GetExtension($srcFileName) -ne ".zip") {
+                  $srcFileName += ".zip"
+                }
+
+                Read-S3Object -BucketName "{{PipelineBucketName}}" -Key $key -File $srcFileName
+                Expand-Archive -Path "$tmpFolder\$srcFileName" -DestinationPath "$srcFolder" -Force
+                
+                Write-Host "*****Building Docker image...*****"
+                
+                $instanceInfo = (Invoke-RestMethod -Method Get -Uri http://169.254.169.254/latest/dynamic/instance-identity/document)
+                $repoUri = $instanceInfo.accountId  + '.dkr.ecr.' + $instanceInfo.region + '.amazonaws.com/{{EcrRepoName}}'
+                $latestUri = "$($repoUri):latest"
+                $hasCustomTag = $False
+                $buildArgs = @("-t", $latestUri)
+                $customTag = "{{ImageTag}}"
+
+                if ($customTag -and $($customTag -ne "latest")) {
+                  $hasCustomTag = $True
+                  $uriWithTag = "$($repoUri):$customTag"
+                  $buildArgs += @("-t", $uriWithTag)
+                }
+
+                Write-Host "Docker Build Args are '$buildArgs'"
+
+                cd $srcFolder
+                docker build $buildArgs $srcFolder\
+
+                if ($LASTEXITCODE -ne 0) {
+                  throw ("'docker build $buildArgs $srcFolder\' execution failed with exit code $LASTEXITCODE.")
+                }
+                
+                Write-Host "*****Pushing Docker image to ECR...*****"
+                
+                Invoke-Expression –Command (Get-ECRLoginCommand –Region $region).Command
+                docker push $repoUri --all-tags
+
+                if ($LASTEXITCODE -ne 0) {
+                  throw "'docker push $repoUri --all-tags' execution failed with exit code $LASTEXITCODE."
+                }
+              executionTimeout: '7200'
+            CloudWatchOutputConfig:
+              CloudWatchLogGroupName: '{{ BuildLogGroupName }}'
+              CloudWatchOutputEnabled: true
+          isCritical: 'true'
+          nextStep: terminateInstance
+        - name: terminateInstance
+          action: 'aws:changeInstanceState'
+          maxAttempts: 3
+          onFailure: Continue
+          inputs:
+            InstanceIds:
+              - '{{getInstance.InstanceId}}'
+            DesiredState: terminated
+          isCritical: 'true'
+          isEnd: 'true'
+        {% endraw %}
+  BuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+        Packaging: NONE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+        - Name: repo_name
+          Type: PLAINTEXT
+          Value: !Ref ECRRepo
+        - Name: service_name
+          Type: PLAINTEXT
+          Value: '{{service.name}}'
+      ServiceRole: !GetAtt PublishRole.Arn
+      LogsConfig:
+        CloudWatchLogs:
+          GroupName: '{{service.name}}/pipeline'
+          Status: 'ENABLED'
+          StreamName: 'build'
+      Source:
+        InsecureSsl: false
+        BuildSpec: !Sub |
+          version: "0.2"
+          env:
+            variables:
+              DOCUMENT_NAME: ${BuildDotNetContainerDocument}
+              ECR_REPO_URI: ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepo}
+              LOG_GROUP_NAME: {{service.name}}/pipeline
+          phases:
+            install:
+              runtime-versions:
+                docker: 18
+              commands:
+                - pip3 install --upgrade --user awscli
+                - echo 'f6bd1536a743ab170b35c94ed4c7c4479763356bd543af5d391122f4af852460  yq_linux_amd64' > yq_linux_amd64.sha
+                - wget https://github.com/mikefarah/yq/releases/download/3.4.0/yq_linux_amd64
+                - sha256sum -c yq_linux_amd64.sha
+                - mv yq_linux_amd64 /usr/bin/yq
+                - chmod +x /usr/bin/yq
+            pre_build:
+              commands:
+                - BUILD_ID=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-8)
+                - IMAGE_TAG=build-$BUILD_ID
+                - SRC_ARTIFACT_FULL_S3_PATH=${!CODEBUILD_SOURCE_VERSION#*"s3:::"}
+                - SRC_ARTIFACT_S3_PATH=${!SRC_ARTIFACT_FULL_S3_PATH#*"/"}
+                - SRC_ARTIFACT_BUCKET_NAME=$(echo $SRC_ARTIFACT_FULL_S3_PATH | cut -c 1-$((${!#SRC_ARTIFACT_FULL_S3_PATH} - ${!#SRC_ARTIFACT_S3_PATH} - 1)))
+                - echo SRC_ARTIFACT_FULL_S3_PATH=$SRC_ARTIFACT_FULL_S3_PATH
+                - echo SRC_ARTIFACT_S3_PATH=$SRC_ARTIFACT_S3_PATH
+                - echo SRC_ARTIFACT_BUCKET_NAME=$SRC_ARTIFACT_BUCKET_NAME
+            build:
+              commands:
+                - echo Starting automation execution using document $DOCUMENT_NAME...
+                - echo Logs are stored under CloudWatch Log Group $LOG_GROUP_NAME...
+                - EXECUTION_ID=$(aws ssm start-automation-execution --document-name $DOCUMENT_NAME --parameters BuildLogGroupName=$LOG_GROUP_NAME,DockerFile={{ pipeline.inputs.dockerfile }},ImageTag=$IMAGE_TAG,PipelineBucketName=$SRC_ARTIFACT_BUCKET_NAME,SourceArtifactS3Path=$SRC_ARTIFACT_S3_PATH --output text)
+                - echo Running execution $EXECUTION_ID...
+                - COMMAND="aws ssm describe-automation-executions --filters Key=ExecutionId,Values=$EXECUTION_ID"
+                - STATUS=$($COMMAND | jq -r ".AutomationExecutionMetadataList[0].AutomationExecutionStatus")
+                - | 
+                  while [ $STATUS = "InProgress" ]; 
+                    do sleep 3; 
+                    STATUS=$($COMMAND | jq -r ".AutomationExecutionMetadataList[0].AutomationExecutionStatus"); 
+                  done
+                - |
+                  if [ $STATUS = "Success" ]; 
+                  then echo Automation execution succeeded.; 
+                  else echo Automation execution failed. Please check CloudWatch log for details.; 
+                    ERROR_MSG=$($COMMAND | jq -r ".AutomationExecutionMetadataList[0].FailureMessage"); 
+                    echo SSM Failure Message Follows.; 
+                    echo $ERROR_MSG; 
+                    exit 1; 
+                  fi
+            post_build:
+              commands:
+                - |
+                  if [ $CODEBUILD_BUILD_SUCCEEDING -eq 1 ];
+                  then echo Writing updated service specification file...;
+                    aws proton --region $AWS_DEFAULT_REGION get-service --name $service_name | jq -r .service.spec > service.yaml;
+                    yq w service.yaml 'instances[*].spec.image' "$ECR_REPO_URI:$IMAGE_TAG" > rendered_service.yaml;
+                    echo **** Updated service spec follows ****
+                    cat rendered_service.yaml
+                  fi
+          artifacts:
+            files:
+              - rendered_service.yaml
+        Type: CODEPIPELINE
+      EncryptionKey: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
+      TimeoutInMinutes: 60
+      QueuedTimeoutInMinutes: 480
+
+  {% for service_instance in service_instances %}
+  Deploy{{loop.index}}Project:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        PrivilegedMode: false
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+        - Name: service_name
+          Type: PLAINTEXT
+          Value:  '{{service.name}}'
+        - Name: service_instance_name
+          Type: PLAINTEXT
+          Value: '{{service_instance.name}}'
+      ServiceRole: !GetAtt DeploymentRole.Arn
+      LogsConfig:
+        CloudWatchLogs:
+          GroupName: '{{service.name}}/pipeline'
+          Status: 'ENABLED'
+          StreamName: 'deploy'
+      Source:
+        BuildSpec: |
+          version: "0.2"
+          phases:
+            build:
+              commands:
+                - pip3 install --upgrade --user awscli
+                - aws proton --region $AWS_DEFAULT_REGION update-service-instance --deployment-type CURRENT_VERSION --name $service_instance_name --service-name $service_name --spec file://rendered_service.yaml
+                - aws proton --region $AWS_DEFAULT_REGION wait service-instance-deployed --name $service_instance_name --service-name $service_name
+        Type: CODEPIPELINE
+      EncryptionKey: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
+  {% endfor %}
+  # This role is used to build container image
+  PublishRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+        Version: '2012-10-17'
+  PublishRoleDefaultPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: PublishRoleDefaultPolicy
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Resource: 
+              - !Sub 'arn:${AWS::Partition}:ec2:*::image/*'
+              - !Sub 'arn:${AWS::Partition}:ec2:*:*:network-interface/*'
+              - !Sub 'arn:${AWS::Partition}:ec2:*:*:security-group/*'
+              - !Sub 'arn:${AWS::Partition}:ec2:*:*:subnet/*'
+              - !Sub 'arn:${AWS::Partition}:ec2:*:*:volume/*'
+            Action:
+              - 'ec2:RunInstances'
+          - Effect: Allow
+            Resource: !Sub 'arn:${AWS::Partition}:ec2:*:*:instance/*'
+            Action:
+              - 'ec2:RunInstances'
+            Condition: 
+              StringEquals: 
+                "aws:RequestTag/tag:aws:cloudformation:stack-id": !Ref AWS::StackId
+          - Effect: Allow
+            Resource: !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+            Action:
+              - 'ec2:TerminateInstances'
+            Condition: 
+              StringEquals: 
+                "aws:ResourceTag/tag:aws:cloudformation:stack-id": !Ref AWS::StackId
+          - Effect: Allow
+            Resource: '*'
+            Action:
+              - 'ec2:DescribeInstances'
+              - 'ec2:DescribeInstanceStatus'
+              - 'ec2:CreateTags'
+          - Effect: Allow
+            Resource: 
+              - !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+            Action:
+              - 'ssm:SendCommand'
+            Condition: 
+              StringEquals: 
+                "aws:ResourceTag/tag:aws:cloudformation:stack-id": !Ref AWS::StackId
+          - Effect: Allow
+            Resource: 
+              - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}::document/AWS-RunPowerShellScript'
+            Action:
+              - 'ssm:SendCommand'
+          - Effect: Allow
+            Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${ContainerImageBuildServerRole}
+            Action:
+              - 'iam:PassRole'
+          - Effect: Allow
+            Resource: '*'
+            Action:
+              - 'ssm:CancelCommand'
+              - 'ssm:DescribeAutomationExecutions'
+              - 'ssm:DescribeInstanceInformation'
+              - 'ssm:ListCommands'
+              - 'ssm:ListCommandInvocations'
+          - Effect: Allow
+            Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:automation-execution/
+            Action:
+              - 'ssm:StopAutomationExecution'
+              - 'ssm:GetAutomationExecution'
+          - Effect: Allow
+            Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:automation-definition/${BuildDotNetContainerDocument}:$DEFAULT
+            Action:
+              - 'ssm:StartAutomationExecution'
+          - Effect: Allow
+            Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}::parameter/aws/service/ami-windows-latest/*
+            Action:
+              - 'ssm:GetParameters'
+          - Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:{{service.name}}/pipeline'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:{{service.name}}/pipeline:*'
+          - Action:
+              - codebuild:CreateReportGroup
+              - codebuild:CreateReport
+              - codebuild:UpdateReport
+              - codebuild:BatchPutTestCases
+            Effect: Allow
+            Resource: !Sub 'arn:${AWS::Partition}:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/${BuildProject}-*'
+          - Action:
+              - proton:GetService
+            Effect: Allow
+            Resource: "*"
+          - Action:
+              - 's3:PutObject'
+              - 's3:GetObject'
+              - 's3:GetObjectVersion'
+              - 's3:GetBucketAcl'
+              - 's3:GetBucketLocation'
+            Effect: Allow
+            Resource:
+              - !GetAtt PipelineArtifactsBucket.Arn
+              - !Sub '${PipelineArtifactsBucket.Arn}/*'
+          - Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+              - kms:Encrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+            Effect: Allow
+            Resource: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
+        Version: '2012-10-17'
+      Roles: [ !Ref PublishRole ]
+
+  DeploymentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+        Version: '2012-10-17'
+  DeploymentRoleDefaultPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: DeploymentRoleDefaultPolicy
+      PolicyDocument:
+        Statement:
+          - Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:{{service.name}}/pipeline'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:{{service.name}}/pipeline:*'
+          - Action:
+              - codebuild:CreateReportGroup
+              - codebuild:CreateReport
+              - codebuild:UpdateReport
+              - codebuild:BatchPutTestCases
+            Effect: Allow
+            Resource: !Sub 'arn:${AWS::Partition}:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/Deploy*Project-*'
+          - Action:
+              - proton:UpdateServiceInstance
+              - proton:GetServiceInstance
+            Effect: Allow
+            Resource: '*'
+          - Action:
+              - s3:GetObject*
+              - s3:GetBucket*
+              - s3:List*
+            Effect: Allow
+            Resource:
+              - !GetAtt PipelineArtifactsBucket.Arn
+              - !Sub '${PipelineArtifactsBucket.Arn}/*'
+          - Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+              - kms:Encrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+            Effect: Allow
+            Resource: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
+        Version: '2012-10-17'
+      Roles: [ !Ref DeploymentRole ]
+  PipelineArtifactsBucketEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      KeyPolicy:
+        Statement:
+          - Action:
+              - kms:Create*
+              - kms:Describe*
+              - kms:Enable*
+              - kms:List*
+              - kms:Put*
+              - kms:Update*
+              - kms:Revoke*
+              - kms:Disable*
+              - kms:Get*
+              - kms:Delete*
+              - kms:ScheduleKeyDeletion
+              - kms:CancelKeyDeletion
+              - kms:GenerateDataKey
+              - kms:TagResource
+              - kms:UntagResource
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Resource: '*'
+          - Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+              - kms:Encrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+            Effect: Allow
+            Principal:
+              AWS:
+                - !GetAtt PipelineRole.Arn
+                - !GetAtt PublishRole.Arn
+                - !GetAtt DeploymentRole.Arn
+                - !GetAtt ContainerImageBuildServerRole.Arn
+            Resource: '*'
+        Version: '2012-10-17'
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+  PipelineArtifactsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              KMSMasterKeyID: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
+              SSEAlgorithm: aws:kms
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+  PipelineArtifactsBucketEncryptionKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: 'alias/codepipeline-encryption-key-{{ service.name }}'
+      TargetKeyId: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+  PipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+        Version: '2012-10-17'
+  PipelineRoleDefaultPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: PipelineRoleDefaultPolicy
+      PolicyDocument:
+        Statement:
+          - Action:
+              - s3:GetObject*
+              - s3:GetBucket*
+              - s3:List*
+              - s3:DeleteObject*
+              - s3:PutObject*
+              - s3:Abort*
+            Effect: Allow
+            Resource:
+              - !GetAtt PipelineArtifactsBucket.Arn
+              - !Sub '${PipelineArtifactsBucket.Arn}/*'
+          - Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+              - kms:Encrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+            Effect: Allow
+            Resource: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
+          - Action: codestar-connections:*
+            Effect: Allow
+            Resource: '*'
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Resource: !GetAtt PipelineBuildCodePipelineActionRole.Arn
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Resource: !GetAtt PipelineDeployCodePipelineActionRole.Arn
+        Version: '2012-10-17'
+      Roles: [ !Ref PipelineRole ]
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      RoleArn: !GetAtt PipelineRole.Arn
+      Stages:
+        - Actions:
+            - ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeStarSourceConnection
+                Version: '1'
+              Configuration:
+                ConnectionArn: '{{ service.repository_connection_arn }}'
+                FullRepositoryId: '{{ service.repository_id }}'
+                BranchName: '{{ service.branch_name }}'
+              Name: Checkout
+              OutputArtifacts:
+                - Name: Artifact_Source_Checkout
+              RunOrder: 1
+          Name: Source
+        - Actions:
+            - ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: !Ref BuildProject
+              InputArtifacts:
+                - Name: Artifact_Source_Checkout
+              Name: Build
+              OutputArtifacts:
+                - Name: BuildOutput
+              RoleArn: !GetAtt PipelineBuildCodePipelineActionRole.Arn
+              RunOrder: 1
+          Name: Build 
+          {%- for service_instance in service_instances %}
+        - Actions:
+            - ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: !Ref Deploy{{loop.index}}Project
+              InputArtifacts:
+                - Name: BuildOutput
+              Name: Deploy
+              RoleArn: !GetAtt PipelineDeployCodePipelineActionRole.Arn
+              RunOrder: 1
+          Name: 'Deploy-{{service_instance.name}}'
+          {%- endfor %}
+      ArtifactStore:
+        EncryptionKey:
+          Id: !GetAtt PipelineArtifactsBucketEncryptionKey.Arn
+          Type: KMS
+        Location: !Ref PipelineArtifactsBucket
+        Type: S3
+    DependsOn:
+      - PipelineRoleDefaultPolicy
+      - PublishRoleDefaultPolicy
+      - PipelineBuildCodePipelineActionRoleDefaultPolicy
+      - PipelineDeployCodePipelineActionRoleDefaultPolicy
+      - ContainerImageBuildServerRoleDefaultPolicy
+  PipelineBuildCodePipelineActionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+        Version: '2012-10-17'
+  PipelineBuildCodePipelineActionRoleDefaultPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - codebuild:BatchGetBuilds
+              - codebuild:StartBuild
+              - codebuild:StopBuild
+            Effect: Allow
+            Resource: !GetAtt BuildProject.Arn
+        Version: '2012-10-17'
+      PolicyName: PipelineBuildCodePipelineActionRoleDefaultPolicy
+      Roles: [ !Ref PipelineBuildCodePipelineActionRole ]
+  PipelineDeployCodePipelineActionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+        Version: '2012-10-17'
+  PipelineDeployCodePipelineActionRoleDefaultPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - codebuild:BatchGetBuilds
+              - codebuild:StartBuild
+              - codebuild:StopBuild
+            Effect: Allow
+            Resource: !Sub 'arn:${AWS::Partition}:codebuild:${AWS::Region}:${AWS::AccountId}:project/Deploy*'
+        Version: '2012-10-17'
+      PolicyName: PipelineDeployCodePipelineActionRoleDefaultPolicy
+      Roles: [ !Ref PipelineDeployCodePipelineActionRole ]
+Outputs:
+  PipelineEndpoint:
+    Description: The URL to access the pipeline
+    Value: !Sub https://${AWS::Region}.console.aws.amazon.com/codesuite/codepipeline/pipelines/${Pipeline}/view?region=${AWS::Region}'
