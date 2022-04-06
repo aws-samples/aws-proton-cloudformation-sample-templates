@@ -51,7 +51,7 @@ schema:
         build_server_ami_id:
           type: string
           description: SSM Parameter expression to use to retrieve the AMI ID for the build server. Must be compatible with operating system version used by ECS cluster.
-          default: /aws/service/ami-windows-latest/Windows_Server-2019-English-Core-ECS_Optimized/image_id
+          default: "/aws/service/ami-windows-latest/Windows_Server-2019-English-Core-ECS_Optimized/image_id"
         build_server_instance_type:
           type: string
           description: "Instance type used for the EC2 Instance that serves as the build server."
