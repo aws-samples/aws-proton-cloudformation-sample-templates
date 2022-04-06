@@ -377,7 +377,7 @@ Resources:
                   then echo Writing updated service specification file...;
                     aws proton --region $AWS_DEFAULT_REGION get-service --name $service_name | jq -r .service.spec > service.yaml;
                     yq w service.yaml 'instances[*].spec.image' "$ECR_REPO_URI:$IMAGE_TAG" > rendered_service.yaml;
-                    echo **** Updated service spec follows ****
+                    echo === Updated service spec follows ===
                     cat rendered_service.yaml
                   fi
           artifacts:
