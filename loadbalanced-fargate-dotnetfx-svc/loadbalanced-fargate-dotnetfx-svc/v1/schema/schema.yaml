@@ -56,9 +56,7 @@ schema:
           type: string
           description: "Instance type used for the EC2 Instance that serves as the build server."
           default: t2.medium
-          enum: [t2.small, t2.medium, t2.large, 
-                 t3.small, t3.medium, t3.large,
-                 t3a.small, t3a.medium, t3a.large ]
+          enum: [t2.small, t2.medium, t2.large, t3.small, t3.medium, t3.large, t3a.small, t3a.medium, t3a.large ]
         build_server_volume_size:
           type: number
           description: "Volume size in GiBs used when provisioning the build server."
