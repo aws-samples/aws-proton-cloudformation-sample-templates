@@ -254,16 +254,6 @@ Resources:
               Fn::GetAtt:
                 - PipelineArtifactsBucketEncryptionKey
                 - Arn
-          - Action:
-              - kms:Decrypt
-              - kms:Encrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-            Effect: Allow
-            Resource:
-              Fn::GetAtt:
-                - PipelineArtifactsBucketEncryptionKey
-                - Arn
         Version: "2012-10-17"
       PolicyName: PublishRoleDefaultPolicy
       Roles:
@@ -348,13 +338,6 @@ Resources:
           - Action:
               - kms:Decrypt
               - kms:DescribeKey
-            Effect: Allow
-            Resource:
-              Fn::GetAtt:
-                - PipelineArtifactsBucketEncryptionKey
-                - Arn
-          - Action:
-              - kms:Decrypt
               - kms:Encrypt
               - kms:ReEncrypt*
               - kms:GenerateDataKey*
@@ -440,15 +423,6 @@ Resources:
           - Action:
               - kms:Decrypt
               - kms:DescribeKey
-            Effect: Allow
-            Principal:
-              AWS:
-                Fn::GetAtt:
-                  - DeploymentRole
-                  - Arn
-            Resource: "*"
-          - Action:
-              - kms:Decrypt
               - kms:Encrypt
               - kms:ReEncrypt*
               - kms:GenerateDataKey*
