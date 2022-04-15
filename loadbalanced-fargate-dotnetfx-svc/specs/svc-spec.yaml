@@ -7,7 +7,7 @@ instances:
   - name: "frontend-dev"
     environment: "Beta"
     spec:
-      desired_count: 2
+      desired_count: 1
       port: 80
       task_size: "medium"
       service_discovery_name: "frontend-dev"
