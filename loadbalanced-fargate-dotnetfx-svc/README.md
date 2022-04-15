@@ -1,6 +1,6 @@
 # AWS Proton Sample .NET Framework Microservices Using Amazon ECS and AWS Fargate
 
-This directory contains a sample AWS Proton Environment and Service templates for a set of .NET Framework 4.8 microservices deployed to Amazon ECS based using service discovery running on AWS Fargate and a CI/CD pipeline used to deploy updates, as well as sample specs for creating Proton Environments and Services using the templates. All resources deployed are tagged.
+This directory contains a sample AWS Proton Environment and Service templates for a set of .NET Framework 4.8 deployed to an Amazon ECS load-balanced service running on AWS Fargate, and a CI/CD pipeline used to deploy updates, as well as sample specs for creating Proton Environments and Services using the templates. All resources deployed are tagged.
 
 The environment template deploys:
 
@@ -9,20 +9,22 @@ The environment template deploys:
 - 2 Nat Gateways across 2 Availability Zones
 - 2 private subnets across 2 Availability Zones
 - 2 public subnets across 2 Availability Zones
-- an ECS Cluster
 - a private namespace for service discovery
-
-The service templates contains all the resources required to create a public ECS Fargate service behind a load balancer and a private ECS Fargate service in that environment. It also provides sample specs for creating Proton Environments and Services using the templates.
 
 Developers provisioning their services can configure the following properties through their service spec:
 
-- Fargate CPU size
-- Fargate memory size
+- ECS Cluster OS family - Because Windows of the coupling in the User/Kernel boundary in Windows, customers must take care to [match the container host OS version with container image versions](https://docs.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility?tabs=windows-server-20H2%2Cwindows-10-20H2#windows-server-host-os-compatibility)
+- ECS task size - Medium (cpu 1024, memory 2048), Large (cpu 2048, memory 4096), and X-Large (cpu 4096, memory 8192). See the [Task Size](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#task_size) page for supported Windows options. 
 - Number of running containers
-- Choose private or public subnets to run the loadbalanced service or the private service, accessed via service discovery
 - Service name to register and use for service discovery
 
-If you need application code to run in the services:
+Developers provisioning their pipeline can configure the following properties through their pipeline spec:
+
+- AMI to use for Build Server - Priviledged modes is not supported on Windows so a Windows EC2 instance is used to create the container image.
+- Build Server instance type, volume size, and volume type
+- Dockerfile path
+
+If you need application code to run in the services, you can find a sample application here:
 * https://github.com/aws-quickstart/quickstart-dotnetfx-ecs-cicd
 
 # Registering and deploying these templates
@@ -83,23 +85,23 @@ First, create an environment template, which will contain all of the environment
 
 ```
 aws proton create-environment-template \
-  --name "aws-proton-fargate-microservices-dotnetfx" \
-  --display-name "aws proton fargate microservices-dotnetfx" \
-  --description "Proton Example Dev VPC with Public facing services and with Private backend services on ECS cluster with Fargate compute"
+  --name "public-vpc" \
+  --display-name "PublicVPC" \
+  --description "VPC with Public Access and ECS Cluster"
 ```
 
 Now create a version which contains the contents of the sample environment template. Compress the sample template files and register the version:
 
 ```
-tar -zcvf env-template.tar.gz environment/
+tar -zcvf env-template.tar.gz loadbalanced-fargate-dotnetfx-env/
 
 aws s3 cp env-template.tar.gz s3://proton-cli-templates-${account_id}/env-template.tar.gz
 
 rm env-template.tar.gz
 
 aws proton create-environment-template-version \
-  --template-name "aws-proton-fargate-microservices-dotnetfx" \
-  --description "Proton Example Dev Environment Version 1" \
+  --template-name "public-vpc" \
+  --description "Version 1" \
   --source s3="{bucket=proton-cli-templates-${account_id},key=env-template.tar.gz}"
 ```
 
@@ -107,7 +109,12 @@ Wait for the environment template version to be successfully registered.
 
 ```
 aws proton wait environment-template-version-registered \
-  --template-name "aws-proton-fargate-microservices-dotnetfx" \
+  --template-name "public-vpc" \
+  --major-version "1" \
+  --minor-version "0"
+  
+aws proton get-environment-template-version \
+  --template-name "public-vpc" \
   --major-version "1" \
   --minor-version "0"
 ```
@@ -116,7 +123,7 @@ You can now publish the environment template version, making it available for us
 
 ```
 aws proton update-environment-template-version \
-  --template-name "aws-proton-fargate-microservices-dotnetfx" \
+  --template-name "public-vpc" \
   --major-version "1" \
   --minor-version "0" \
   --status "PUBLISHED"
@@ -124,38 +131,43 @@ aws proton update-environment-template-version \
 
 ## Register the Service Templates
 
-Register the sample service template, which contains all the resources required to provision an ECS Fargate service behind a load balancer, the private services as well as a continuous delivery pipeline using AWS CodePipeline for each.
+Register the sample service template, which contains all the resources required to provision an ECS Fargate service behind a load balancer as well as a continuous delivery pipeline using AWS CodePipeline.
 
 First, create the service template.
 
 ```
 aws proton create-service-template \
-  --name "lb-public-fargate-svc-dotnetfx" \
-  --display-name "PublicLoadbalancedDotNetFargateService" \
+  --name "lb-fargate-service-dotnetfx" \
+  --display-name "PublicLoadbalancedDotNetFxFargateService" \
   --description ".NET Framework Windows Fargate Service with an Application Load Balancer"
 ```
 
 Now create a version which contains the contents of the sample service template. Compress the sample template files and register the version:
 
 ```
-tar -zcvf svc-public-template.tar.gz service/loadbalanced-public-svc/
+tar -zcvf lb-fargate-service-dotnetfx-template.tar.gz loadbalanced-fargate-dotnetfx-svc/
 
-aws s3 cp svc-public-template.tar.gz s3://proton-cli-templates-${account_id}/svc-public-template.tar.gz
+aws s3 cp lb-fargate-service-dotnetfx-template.tar.gz s3://proton-cli-templates-${account_id}/lb-fargate-service-dotnetfx-template.tar.gz
 
-rm svc-public-template.tar.gz
+rm lb-fargate-service-dotnetfx-template.tar.gz
 
 aws proton create-service-template-version \
-  --template-name "lb-public-fargate-svc-dotnetfx" \
+  --template-name "lb-fargate-service-dotnetfx" \
   --description "Version 1" \
-  --source s3="{bucket=proton-cli-templates-${account_id},key=svc-public-template.tar.gz}" \
-  --compatible-environment-templates '[{"templateName":"aws-proton-fargate-microservices-dotnetfx","majorVersion":"1"}]'
+  --source s3="{bucket=proton-cli-templates-${account_id},key=lb-fargate-service-dotnetfx-template.tar.gz}" \
+  --compatible-environment-templates '[{"templateName":"lb-fargate-service-dotnetfx","majorVersion":"1"}]'
 ```
 
 Wait for the service template version to be successfully registered.
 
 ```
 aws proton wait service-template-version-registered \
-  --template-name "lb-public-fargate-svc-dotnetfx" \
+  --template-name "lb-fargate-service-dotnetfx" \
+  --major-version "1" \
+  --minor-version "0"
+
+aws proton get-service-template-version \
+  --template-name "lb-fargate-service-dotnetfx" \
   --major-version "1" \
   --minor-version "0"
 ```
@@ -164,51 +176,7 @@ You can now publish the Public service template version, making it available for
 
 ```
 aws proton update-service-template-version \
-  --template-name "lb-public-fargate-svc-dotnetfx" \
-  --major-version "1" \
-  --minor-version "0" \
-  --status "PUBLISHED"
-```
-
-### Second, create the Private service template.
-
-```
-aws proton create-service-template \
-  --name "private-fargate-svc-dotnetfx" \
-  --display-name "PrivateBackendDotNetFargateService" \
-  --description ".NET Framework Windows Private Backend Fargate Service"
-```
-
-Now create a version which contains the contents of the sample service template. Compress the sample template files and register the version:
-
-```
-tar -zcvf svc-private-template.tar.gz service/private-fargate-svc-dotnetfx/
-
-aws s3 cp svc-private-template.tar.gz s3://proton-cli-templates-${account_id}/svc-private-template.tar.gz
-
-rm svc-private-template.tar.gz
-
-aws proton create-service-template-version \
-  --template-name "private-fargate-svc-dotnetfx" \
-  --description "Version 1" \
-  --source s3="{bucket=proton-cli-templates-${account_id},key=svc-private-template.tar.gz}" \
-  --compatible-environment-templates '[{"templateName":"aws-proton-fargate-microservices-dotnetfx","majorVersion":"1"}]'
-```
-
-Wait for the service template version to be successfully registered.
-
-```
-aws proton wait service-template-version-registered \
-  --template-name "private-fargate-svc-dotnetfx" \
-  --major-version "1" \
-  --minor-version "0"
-```
-
-You can now publish the Public service template version, making it available for users in your AWS account to create Proton services.
-
-```
-aws proton update-service-template-version \
-  --template-name "private-fargate-svc-dotnetfx" \
+  --template-name "lb-fargate-service-dotnetfx" \
   --major-version "1" \
   --minor-version "0" \
   --status "PUBLISHED"
@@ -231,7 +199,7 @@ First, deploy a Proton environment. This command reads your environment spec at 
 ```
 aws proton create-environment \
   --name "Beta" \
-  --template-name aws-proton-fargate-microservices-dotnetfx \
+  --template-name public-vpc \
   --template-major-version 1 \
   --proton-service-role-arn arn:aws:iam::${account_id}:role/ProtonServiceRole \
   --spec file://specs/env-spec.yaml
@@ -284,7 +252,7 @@ Then, create a Proton environment. This command reads your environment spec at `
 ```bash
 aws proton create-environment \
   --name "Beta" \
-  --template-name aws-proton-fargate-microservices-dotnetfx \
+  --template-name public-vpc \
   --template-major-version 1 \
   --environment-account-connection-id ${environment_account_connection_id} \
   --spec file://specs/env-spec.yaml
@@ -314,7 +282,7 @@ aws proton create-service \
   --repository-id "<your-source-repo-account>/<your-repository-name>" \
   --branch "main" \
   --template-major-version 1 \
-  --template-name lb-public-fargate-svc-dotnetfx \
+  --template-name lb-fargate-service-dotnetfx \
   --spec file://specs/svc-public-spec.yaml
 ```
 
@@ -324,28 +292,4 @@ Wait for the service to successfully deploy.
 aws proton wait service-created --name front-end
 
 aws proton get-service --name front-end
-```
-
-And finally, create a Private Proton service and deploy it into your Proton environment.  This command reads your service spec at `specs/svc-private-spec.yaml`, merges it with the service template created above, and deploys the resources in CloudFormation stacks in your AWS account using the Proton service role. The service will provision a private ECS service running on Fargate and a CodePipeline pipeline to deploy your application code.
-
-
-Fill in your CodeStar Connections connection ID and your source code repository details in this command.
-
-```
-aws proton create-service \
-  --name "back-end" \
-  --repository-connection-arn arn:aws:codestar-connections:us-west-2:${account_id}:connection/<your-codestar-connection-id> \
-  --repository-id "<your-source-repo-account>/<your-repository-name>" \
-  --branch "main" \
-  --template-major-version 1 \
-  --template-name private-fargate-svc-dotnetfx \
-  --spec file://specs/svc-private-spec.yaml
-```
-
-Wait for the service to successfully deploy.
-
-```
-aws proton wait service-created --name back-end
-
-aws proton get-service --name back-end
 ```
