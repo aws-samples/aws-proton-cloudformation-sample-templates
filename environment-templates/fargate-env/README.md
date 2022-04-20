@@ -1,4 +1,4 @@
-## fargate-env
+## Description
 
 This template creates a VPC with two public and private subnets across two availability zones. The VPC includes an Internet Gateway and a managed NAT Gateway in each public subnet as well as VPC Route Tables that allow for communication between the public and private subnets. 
 
