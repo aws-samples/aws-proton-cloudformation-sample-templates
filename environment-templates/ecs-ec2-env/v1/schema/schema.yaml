@@ -9,7 +9,7 @@ schema:
       properties:
         vpc_cidr:
           type: string
-          description: "This CIDR range for your VPC"
+          description: "The CIDR range for your VPC"
           default: 10.0.0.0/16
           pattern: ([0-9]{1,3}\.){3}[0-9]{1,3}($|/(16|18|24))
         public_subnet_one_cidr:
@@ -40,13 +40,13 @@ schema:
         DesiredCapacity:
           type: number
           default: 1
-          description: "Number of EC2 instances to launch in your ECS cluster."
+          description: "Number of EC2 instances to launch in your ECS cluster"
         MaxSize:
           type: number
           default: 6
-          description: "Maximum number of EC2 instances that can be launched in your ECS cluster."
+          description: "Maximum number of EC2 instances that can be launched in your ECS cluster"
         ECSAMI:
-          description: "AMI ID"
+          description: "AMI used to launch the EC2 instances"
           type: string
           default: "/aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id"
         InstanceType:
