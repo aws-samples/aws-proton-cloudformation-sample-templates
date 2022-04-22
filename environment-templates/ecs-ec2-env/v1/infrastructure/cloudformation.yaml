@@ -574,7 +574,7 @@ Outputs:
   ServiceTaskDefExecutionRoleArn:
     Description: The ARN of the ECS role
     Value: !GetAtt 'ServiceTaskDefExecutionRole.Arn'
-  SNSTopic:
+  SNSTopicArn:
     Description: The name of the SNS Topic
     Value: !Ref 'pingSNSTopic'
   SNSTopicName:

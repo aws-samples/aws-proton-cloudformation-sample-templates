@@ -37,7 +37,7 @@ Resources:
             Statement:
               - Effect: 'Allow'
                 Action: 'sns:Publish'
-                Resource: '{{environment.outputs.SNSTopic}}'
+                Resource: '{{environment.outputs.SNSTopicArn}}'
   ServiceTaskDef:
     Type: 'AWS::ECS::TaskDefinition'
     Properties:
@@ -56,7 +56,7 @@ Resources:
               Protocol: tcp
           Environment:
             - Name: SNS_TOPIC_ARN
-              Value: '{"ping":"{{environment.outputs.SNSTopic}}"}'
+              Value: '{"ping":"{{environment.outputs.SNSTopicArn}}"}'
             - Name: SNS_REGION
               Value: "{{environment.outputs.SNSRegion}}"
       Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]

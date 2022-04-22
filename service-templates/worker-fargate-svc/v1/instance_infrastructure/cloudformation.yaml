@@ -59,11 +59,11 @@ Resources:
             Resource: !GetAtt ServiceEcsProcessingQueue.Arn
             Condition:
               ArnEquals:
-                aws:SourceArn: '{{environment.outputs.SNSTopic}}'
+                aws:SourceArn: '{{environment.outputs.SNSTopicArn}}'
   pingSNSTopicSubscription:
     Type: AWS::SNS::Subscription
     Properties:
-      TopicArn: '{{environment.outputs.SNSTopic}}'
+      TopicArn: '{{environment.outputs.SNSTopicArn}}'
       Protocol: 'sqs'
       Endpoint: !GetAtt ServiceEcsProcessingQueue.Arn
   ServiceQueueProcessingTaskDefTaskRole:

@@ -44,7 +44,7 @@ Resources:
             Enabled: true
       Environment:
         Variables:
-          SNStopic: '{{environment.outputs.SNSTopic}}'
+          SNStopic: '{{environment.outputs.SNSTopicArn}}'
       Policies:
         - AWSLambdaVPCAccessExecutionRole
         - SNSPublishMessagePolicy:

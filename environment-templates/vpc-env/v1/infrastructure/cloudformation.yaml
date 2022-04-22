@@ -203,7 +203,7 @@ Resources:
       SecurityGroups: 
         - !GetAtt VPC.DefaultSecurityGroup
 Outputs:
-  SNSTopic:
+  SNSTopicArn:
     Description: The name of the SNS Topic
     Value: !Ref 'pingSNSTopic'
   SNSTopicName:

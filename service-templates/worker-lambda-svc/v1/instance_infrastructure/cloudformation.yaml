@@ -51,11 +51,11 @@ Resources:
             Resource: !GetAtt MySqsQueue.Arn
             Condition:
               ArnEquals:
-                aws:SourceArn: '{{environment.outputs.SNSTopic}}'
+                aws:SourceArn: '{{environment.outputs.SNSTopicArn}}'
   pingSNSTopicSubscription:
     Type: AWS::SNS::Subscription
     Properties:
-      TopicArn: '{{environment.outputs.SNSTopic}}'
+      TopicArn: '{{environment.outputs.SNSTopicArn}}'
       Protocol: 'sqs'
       Endpoint: !GetAtt MySqsQueue.Arn
   # Lambda Function - uses Globals to define additional configuration values

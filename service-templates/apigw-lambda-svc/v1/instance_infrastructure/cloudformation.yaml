@@ -62,7 +62,7 @@ Resources:
       FunctionName: '{{service_instance.name}}-function'
       Environment:
         Variables:
-          SNStopic: '{{environment.outputs.SNSTopic}}'
+          SNStopic: '{{environment.outputs.SNSTopicArn}}'
       Policies:
         - AWSLambdaVPCAccessExecutionRole
         - SNSPublishMessagePolicy:
