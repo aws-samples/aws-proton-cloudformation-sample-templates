@@ -32,7 +32,7 @@ schema:
           title: "Image"
           type: string
           description: "The name/url of the container image"
-          default: "public.ecr.aws/z9d2n7e1/nginx:1.21.0"
+          default: "public.ecr.aws/nginx/nginx:1.21"
           minLength: 1
           maxLength: 200
 
