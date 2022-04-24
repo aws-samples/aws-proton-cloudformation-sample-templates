@@ -6,6 +6,8 @@ schema:
     EnvironmentInput:
       type: object
       description: "Input properties for my environment"
+      required:
+        - ttl_attribute
       properties:
         ttl_attribute:
           title: "TTL attribute"
