@@ -20,7 +20,7 @@ The environment supports asynchronous service-to-service communication using a p
 
 ## Security
 
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+See [CONTRIBUTING](../../CONTRIBUTING.md#security-issue-notifications) for more information.
 
 ## License
 

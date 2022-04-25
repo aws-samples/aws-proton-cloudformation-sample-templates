@@ -20,7 +20,7 @@ The template also creates an Amazon VPC endpoint to publish messages to the SNS 
 
 ## Security
 
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+See [CONTRIBUTING](../../CONTRIBUTING.md#security-issue-notifications) for more information.
 
 ## License
 

@@ -1,12 +1,42 @@
-## load-balanced-fargate-svc
+## Description
 
-This template creates an ECS service running on a Fargate cluster fronted by an application or a network load balancer.
+This template is compatible with the [fargate-env](../../environment-templates/fargate-env) template. It creates an ECS service running on the Fargate cluster fronted by a load balancer. The loadbalancer_type parameter allows you to choose between an application load balancer or a network loadbalancer. The service can be configured to run in a Public subnet with direct internet access or in a Private subnet without direct internet access. The networking configuration of can be selected using the subnet_type parameter. Other service properties like port number, desired task count, task size (cpu/memory units), and docker image URL can be specified through the service input parameters. 
+
+The template also provisions a CodePipeline based pipeline to pull your application source code before building and deploying it to the Proton service. To use sample application code, please fork the sample code repository [aws-proton-sample-services](https://github.com/aws-samples/aws-proton-sample-services). By default, the template deploys a static website to the service. 
+
+## Architecture
+
+### Public Network
+![lb-fargate-public-srv](../../images/lb-fargate-public-srv.png)
+
+### Private Network
+![lb-fargate-private-srv](../../images/lb-fargate-private-srv.png)
+
+## Parameters
+
+### Service Inputs
+
+1. port: The port to route traffic to
+2. desired_count: The default number of Fargate tasks you want running
+3. task_size: The size of the task you want to run
+4. subnet_type: Subnet type for your service
+5. loadbalancer_type: Type of loadbalancer to front your service
+6. image: The name/url of the container image
+7. backendurl: Service discovery url of the backend service
+
+### Pipeline Inputs
+
+1. service_dir: Source directory for the service
+2. dockerfile: The location of the Dockerfile to build
+3. unit_test_command: The command to run to unit test the application code
+4. environment_account_ids: The environment account ids for service instances using cross account environment
 
 ## Security
 
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+See [CONTRIBUTING](../../CONTRIBUTING.md#security-issue-notifications) for more information.
 
 ## License
 
-This library is licensed under the MIT-0 License. See the LICENSE file.
+This library is licensed under the MIT-0 License. See the [LICENSE](../../LICENSE) file.
+
 

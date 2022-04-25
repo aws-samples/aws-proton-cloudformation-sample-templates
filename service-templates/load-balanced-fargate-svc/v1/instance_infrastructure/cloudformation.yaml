@@ -20,7 +20,7 @@ Mappings:
       memory: 8192
 
 Resources:
-  ServiceLB:
+  LoadBalancer:
     Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
     Properties:
       LoadBalancerAttributes:
@@ -30,7 +30,7 @@ Resources:
       {% if service_instance.inputs.loadbalancer_type == 'application' %}
       SecurityGroups:
         - !GetAtt 
-          - ServiceLBSecurityGroup
+          - LoadBalancerSecurityGroup
           - GroupId
       {% endif %}
       Subnets:
@@ -38,7 +38,7 @@ Resources:
         - '{{environment.outputs.PublicSubnet2}}'
       {% if service_instance.inputs.loadbalancer_type == 'application' %}
       Type: application
-  ServiceLBSecurityGroup:
+  LoadBalancerSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Automatically created Security Group for Application LB.
@@ -49,11 +49,11 @@ Resources:
           IpProtocol: tcp
           ToPort: 80
       VpcId: '{{environment.outputs.VPC}}'
-  ServiceLBSecurityGrouptoServiceSecurityGroup:
+  LoadBalancerSecurityGrouptoServiceSecurityGroup:
     Type: 'AWS::EC2::SecurityGroupEgress'
     Properties:
       GroupId: !GetAtt 
-        - ServiceLBSecurityGroup
+        - LoadBalancerSecurityGroup
         - GroupId
       IpProtocol: tcp
       Description: Load balancer to target
@@ -65,20 +65,20 @@ Resources:
       {% else %}
       Type: network
       {% endif %}           
-  ServiceLBPublicListener:
+  LoadBalancerPublicListener:
     Type: 'AWS::ElasticLoadBalancingV2::Listener'
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref ServiceLBPublicListenerECSGroup
+        - TargetGroupArn: !Ref LoadBalancerPublicListenerECSGroup
           Type: forward
-      LoadBalancerArn: !Ref ServiceLB
+      LoadBalancerArn: !Ref LoadBalancer
       Port: 80
       {% if service_instance.inputs.loadbalancer_type == 'application' %}
       Protocol: HTTP
       {% else %}
       Protocol: TCP
       {% endif %}              
-  ServiceLBPublicListenerECSGroup:
+  LoadBalancerPublicListenerECSGroup:
     Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
     Properties:
       Port: '{{service_instance.inputs.port}}'
@@ -119,7 +119,7 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Ref ServiceTaskDefwebLogGroup
+              awslogs-group: !Ref ServiceTaskDefLogGroup
               awslogs-stream-prefix: '{{service.name}}/{{service_instance.name}}'
               awslogs-region: !Ref 'AWS::Region'
           Name: '{{service_instance.name}}'
@@ -143,7 +143,7 @@ Resources:
       TaskRoleArn: !GetAtt 
         - ServiceTaskDefTaskRole
         - Arn
-  ServiceTaskDefwebLogGroup:
+  ServiceTaskDefLogGroup:
     Type: 'AWS::Logs::LogGroup'
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain
@@ -162,7 +162,7 @@ Resources:
       LoadBalancers:
         - ContainerName: '{{service_instance.name}}'
           ContainerPort: '{{service_instance.inputs.port}}'
-          TargetGroupArn: !Ref ServiceLBPublicListenerECSGroup
+          TargetGroupArn: !Ref LoadBalancerPublicListenerECSGroup
       NetworkConfiguration:
         AwsvpcConfiguration:
         {% if service_instance.inputs.subnet_type == 'private' %}
@@ -184,13 +184,13 @@ Resources:
           {% endif %}
       ServiceRegistries:
         - RegistryArn: !GetAtt 
-            - ServiceCloudmapService
+            - CloudMapService
             - Arn
       TaskDefinition: !Ref ServiceTaskDef
     DependsOn:
-      - ServiceLBPublicListenerECSGroup
-      - ServiceLBPublicListener
-  ServiceCloudmapService:
+      - LoadBalancerPublicListenerECSGroup
+      - LoadBalancerPublicListener
+  CloudMapService:
     Type: 'AWS::ServiceDiscovery::Service'
     Properties:
       DnsConfig:
@@ -212,7 +212,7 @@ Resources:
           Description: Allow all outbound traffic by default
           IpProtocol: '-1'
       VpcId: '{{environment.outputs.VPC}}'
-  ServiceSecurityGroupfromServiceLBSecurityGroup:
+  ServiceSecurityGroupfromLoadBalancerSecurityGroup:
     Type: 'AWS::EC2::SecurityGroupIngress'
     Properties:
       IpProtocol: tcp
@@ -224,12 +224,12 @@ Resources:
       ToPort: 80
       {% if service_instance.inputs.loadbalancer_type == 'application' %}
       SourceSecurityGroupId: !GetAtt 
-        - ServiceLBSecurityGroup
+        - LoadBalancerSecurityGroup
         - GroupId
       {% else %}
       CidrIp: 0.0.0.0/0 #Network Load Balancers do not have associated security groups. See - https://docs.aws.amazon.com/elasticloadbalancing/latest/network/target-group-register-targets.html#target-security-groups
       {% endif %}
-  ServiceTaskCountTarget:
+  TaskCountTarget:
     Type: 'AWS::ApplicationAutoScaling::ScalableTarget'
     DependsOn: Service
     Properties:
@@ -244,22 +244,22 @@ Resources:
       RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
       ScalableDimension: 'ecs:service:DesiredCount'
       ServiceNamespace: ecs
-  ServiceTaskCountTargetCpuScaling:
+  TaskCountTargetCpuScaling:
     Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
     Properties:
       PolicyName: LBFargateServiceTaskCountTargetCpuScaling
       PolicyType: TargetTrackingScaling
-      ScalingTargetId: !Ref ServiceTaskCountTarget
+      ScalingTargetId: !Ref TaskCountTarget
       TargetTrackingScalingPolicyConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ECSServiceAverageCPUUtilization
         TargetValue: 50
-  ServiceTaskCountTargetMemoryScaling:
+  TaskCountTargetMemoryScaling:
     Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
     Properties:
       PolicyName: LBFargateServiceTaskCountTargetMemoryScaling
       PolicyType: TargetTrackingScaling
-      ScalingTargetId: !Ref ServiceTaskCountTarget
+      ScalingTargetId: !Ref TaskCountTarget
       TargetTrackingScalingPolicyConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ECSServiceAverageMemoryUtilization
@@ -270,5 +270,5 @@ Outputs:
       - ''
       - - 'http://'
         - !GetAtt 
-          - ServiceLB
+          - LoadBalancer
           - DNSName
