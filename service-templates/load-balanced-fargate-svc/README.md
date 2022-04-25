@@ -6,10 +6,10 @@ The template also provisions a CodePipeline based pipeline to pull your applicat
 
 ## Architecture
 
-### Public Network
+### Public Subnet
 ![lb-fargate-public-srv](../../images/lb-fargate-public-srv.png)
 
-### Private Network
+### Private Subnet
 ![lb-fargate-private-srv](../../images/lb-fargate-private-srv.png)
 
 ## Parameters

@@ -6,10 +6,10 @@ The template also provisions a CodePipeline based pipeline to pull your applicat
 
 ## Architecture
 
-### Public Network
+### Public Subnet
 ![lb-ecs-ec2-public-srv](../../images/lb-ecs-ec2-public-srv.png)
 
-### Private Network
+### Private Subnet
 ![lb-ecs-ec2-private-srv](../../images/lb-ecs-ec2-private-srv.png)
 
 ## Parameters
