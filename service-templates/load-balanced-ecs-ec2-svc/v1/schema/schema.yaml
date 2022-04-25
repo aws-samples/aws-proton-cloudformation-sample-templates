@@ -17,7 +17,7 @@ schema:
           maximum: 65535
         desired_count:
           type: number
-          description: "The default number of ECSEC2 tasks you want running"
+          description: "The default number of ECS tasks you want running"
           default: 1
           minimum: 1
         task_size:

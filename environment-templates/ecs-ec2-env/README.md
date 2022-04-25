@@ -4,14 +4,18 @@ This template creates a VPC with two public and private subnets across two avail
 
 It also deployes an ECS cluster to group your fargate tasks and services. An ECS task execution role is created to allow tasks to pull container images from an ECR private repository, and send container logs to CloudWatch Logs. In order to support Service Discovery, we also create a private namespace based on DNS, which is visible only inside the VPC.
 
-We also create an Auto Scaling group to deploy the EC2 instances hosting your containers. The EC2 Auto Scaling service takes care of scaling and maintaining the number of instances in the group. The desired capacity and the maximum size of the group can be set using the parameters DesiredCapacity, and MaxSize respectively. The template also accepts inputs to choose the EC2 instance type and the AMI for launching the instance. The stack uses Auto Scaling lifecycle hooks and AWS Lambda to automate the process removing tasks from the EC2 instance before scaling down the cluster. Please see [How to Automate Container Instance Draining in Amazon ECS](https://aws.amazon.com/blogs/compute/how-to-automate-container-instance-draining-in-amazon-ecs/) for complete explanation. 
+We also create an Auto Scaling group to deploy the EC2 instances hosting your containers. The EC2 Auto Scaling service takes care of scaling and maintaining the number of instances in the group. The subnet_type parameter is used to select whether the instances are created in the public subnet or in the private subnet. The desired capacity and the maximum size of the group can be set using the parameters DesiredCapacity, and MaxSize respectively. The template also accepts inputs to choose the EC2 instance type and the AMI for launching the instance. The stack uses Auto Scaling lifecycle hooks and AWS Lambda to automate the process removing tasks from the EC2 instance before scaling down the cluster. Please see [How to Automate Container Instance Draining in Amazon ECS](https://aws.amazon.com/blogs/compute/how-to-automate-container-instance-draining-in-amazon-ecs/) for complete explanation. 
 
 The environment supports asynchronous service-to-service communication using a publish/subscribe model through a shared Amazon SNS topic. In contrast to synchronous communication (i.e. HTTP API), with asynchronous communication, we can avoid blocking the sender to wait for a response as well as decoupling producer from consumer. Multiple services can broadcast events to the SNS topic. All components that subscribe to the topic will receive the message, and can each do something different with the message in parallel.
 
 
 ## Architecture
 
-![ecs-ec2-env](../../images/ecs-ec2-env.png)
+### Public Subnet
+![ecs-ec2-public-subnet-env](../../images/ecs-ec2-public-subnet-env.png)
+
+### Private Subnet
+![ecs-ec2-private-subnet-env](../../images/ecs-ec2-private-subnet-env.png)
 
 ## Parameters
 
