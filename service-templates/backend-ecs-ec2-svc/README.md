@@ -1,4 +1,4 @@
-## backend-ecs-ec2-svc
+## Description
 
 This template is compatible with the [ecs-ec2-env](../../environment-templates/ecs-ec2-env) template. It creates an ECS service that can't be accessed externally, running on a Self-managed cluster of EC2 hosts. Only services running on your cluster can discover the service through Service Discovery. The service is configured to use Bridge networking utilizing Docker's built-in virutal network that runs inside each container. The bridge networking mode creates a layer between the host and the networking of the container. Please see [Amazon ECS task networking](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-networking.html) for more information. The service uses type SRV DNS record as only SRV records are supported in bridge networking mode. The service can be configured to run in a Public subnet or a Private subnet using the subnet_type parameter. Other service properties like port number, desired task count, task size (cpu/memory units), and docker image URL can be specified through the service input parameters. 
 
@@ -30,7 +30,7 @@ The template also provisions a CodePipeline based pipeline to pull your applicat
 4. environment_account_ids: The environment account ids for service instances using cross account environment
 
 ## Test
-This backend service can be tested by deploying a[load-balanced-ecs-ec2-svc](../load-balanced-ecs-ec2-svc) that runs [ecs-ping-backend-srv-record](https://github.com/aws-samples/aws-proton-sample-services/tree/main/ecs-ping-backend-srv-record) application code to ping the backend service using service discovery. Expected response:
+This backend service can be tested by deploying a [load-balanced-ecs-ec2-svc](../load-balanced-ecs-ec2-svc) that runs [ecs-ping-backend-srv-record](https://github.com/aws-samples/aws-proton-sample-services/tree/main/ecs-ping-backend-srv-record) application code to ping the backend service using service discovery. Expected response:
 ```
 {"backend_response": "Hello from backend-svc. Time: Tuesday, April 26 2022, 04:15:28"}
 ```
