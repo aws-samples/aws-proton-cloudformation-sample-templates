@@ -44,7 +44,7 @@ schema:
           default: "public"
         schedule_expression:
           type: string
-          description: "The schedule or rate (frequency) for CloudWatch Events"
+          description: "The schedule or rate (frequency) for EventBridge rule"
           default: "rate(5 minutes)"
           minLength: 1
           maxLength: 200
