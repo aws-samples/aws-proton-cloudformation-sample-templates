@@ -39,7 +39,7 @@ schema:
           maxLength: 200
         subnet_type:
           type: string
-          description: "Subnet type for your service"
+          description: "Subnet type for your function"
           enum: ["public", "private"]
           default: "public"
 
