@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Deploy a scheduled ECS task on EC2 that will be initiated off of CloudWatch Events.
+Description: Deploy a scheduled ECS task on EC2 that will be initiated off of EventBridge Events.
 
 Mappings:
   TaskSize:
@@ -20,7 +20,7 @@ Mappings:
       memory: 8192
 
 Resources:
-  ScheduledECSEC2TaskScheduledEventRule:
+  ScheduledEventRule:
     Type: 'AWS::Events::Rule'
     Properties:
       ScheduleExpression: '{{service_instance.inputs.schedule_expression}}'
@@ -29,13 +29,13 @@ Resources:
         - Arn: '{{environment.outputs.ClusterArn}}'
           EcsParameters:
             TaskCount: '{{service_instance.inputs.desired_count}}'
-            TaskDefinitionArn: !Ref ScheduledECSEC2TaskScheduledTaskDef
+            TaskDefinitionArn: !Ref ScheduledTaskDef
           Id: Target0
           Input: '{}'
           RoleArn: !GetAtt 
-            - ScheduledECSEC2TaskScheduledTaskDefEventsRole
+            - ScheduledTaskDefEventsRole
             - Arn
-  ScheduledECSEC2TaskScheduledTaskDefTaskRole:
+  ScheduledTaskDefTaskRole:
     Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
@@ -53,7 +53,7 @@ Resources:
               - Effect: 'Allow'
                 Action: 'sns:Publish'
                 Resource: '{{environment.outputs.SNSTopicArn}}'
-  ScheduledECSEC2TaskScheduledTaskDef:
+  ScheduledTaskDef:
     Type: 'AWS::ECS::TaskDefinition'
     Properties:
       ContainerDefinitions:
@@ -79,13 +79,13 @@ Resources:
       RequiresCompatibilities:
         - EC2
       TaskRoleArn: !GetAtt 
-        - ScheduledECSEC2TaskScheduledTaskDefTaskRole
+        - ScheduledTaskDefTaskRole
         - Arn
   ScheduledTaskDefLogGroup:
     Type: 'AWS::Logs::LogGroup'
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain
-  ScheduledECSEC2TaskScheduledTaskDefEventsRole:
+  ScheduledTaskDefEventsRole:
     Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
@@ -95,7 +95,7 @@ Resources:
             Principal:
               Service: events.amazonaws.com
         Version: 2012-10-17
-  ScheduledECSEC2TaskScheduledTaskDefEventsRoleDefaultPolicy:
+  ScheduledTaskDefEventsRoleDefaultPolicy:
     Type: 'AWS::IAM::Policy'
     Properties:
       PolicyDocument:
@@ -105,16 +105,16 @@ Resources:
               ArnEquals:
                 'ecs:cluster': '{{environment.outputs.ClusterArn}}'
             Effect: Allow
-            Resource: !Ref ScheduledECSEC2TaskScheduledTaskDef
+            Resource: !Ref ScheduledTaskDef
           - Action: 'iam:PassRole'
             Effect: Allow
             Resource: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
           - Action: 'iam:PassRole'
             Effect: Allow
             Resource: !GetAtt 
-              - ScheduledECSEC2TaskScheduledTaskDefTaskRole
+              - ScheduledTaskDefTaskRole
               - Arn
         Version: 2012-10-17
-      PolicyName: ScheduledECSEC2TaskScheduledTaskDefEventsRoleDefaultPolicy
+      PolicyName: ScheduledTaskDefEventsRoleDefaultPolicy
       Roles:
-        - !Ref ScheduledECSEC2TaskScheduledTaskDefEventsRole
+        - !Ref ScheduledTaskDefEventsRole

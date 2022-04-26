@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Deploy a scheduled Fargate task that will be initiated off of CloudWatch Events.
+Description: Deploy a scheduled Fargate task that will be initiated off of EventBridge Events.
 
 Mappings:
   TaskSize:
