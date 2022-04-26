@@ -19,11 +19,6 @@ schema:
           description: "The size of the task you want to run"
           enum: ["x-small", "small", "medium", "large", "x-large"]
           default: "x-small"
-        subnet_type:
-          type: string
-          description: "Subnet type for your service"
-          enum: ["public", "private"]
-          default: "public"
         image:
           type: string
           description: "The name/url of the container image"

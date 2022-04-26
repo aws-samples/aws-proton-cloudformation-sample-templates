@@ -2,7 +2,8 @@
 
 This template is compatible with the [fargate-env](../../environment-templates/fargate-env) template. It creates a Fargate service that can't be accessed externally, but only from other services in your cluster through Service Discovery. The service uses type A DNS record. The service can be configured to run in a Public subnet or a Private subnet using the subnet_type parameter. Other service properties like port number, desired task count, task size (cpu/memory units), and docker image URL can be specified through the service input parameters. 
 
-The template also provisions a CodePipeline based pipeline to pull your application source code before building and deploying it to the Proton service. To use sample application code, please fork the sample code repository [aws-proton-sample-services](https://github.com/aws-samples/aws-proton-sample-services). By default, the template deploys a Flask app, that responds with a Hello message along with a Timestamp. 
+The template also provisions a CodePipeline based pipeline to pull your application source code before building and deploying it to the Proton service. To use sample application code, please fork the sample code repository [aws-proton-sample-services](https://github.com/aws-samples/aws-proton-sample-services). By default, the template deploys a [Flask app](https://github.com/aws-samples/aws-proton-sample-services/tree/main/ecs-backend), that responds with a Hello message along with the Time. 
+
 
 ## Architecture
 

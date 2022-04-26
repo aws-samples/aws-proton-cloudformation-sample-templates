@@ -20,18 +20,18 @@ Mappings:
       memory: 8192
 
 Resources:
-  ServiceEcsProcessingDeadLetterQueue:
+  DeadLetterQueue:
     Type: 'AWS::SQS::Queue'
     Properties:
       MessageRetentionPeriod: 1209600
     UpdateReplacePolicy: Delete
     DeletionPolicy: Delete
-  ServiceEcsProcessingQueue:
+  ServiceQueue:
     Type: 'AWS::SQS::Queue'
     Properties:
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt 
-          - ServiceEcsProcessingDeadLetterQueue
+          - DeadLetterQueue
           - Arn
         maxReceiveCount: 3
     UpdateReplacePolicy: Delete
@@ -39,24 +39,24 @@ Resources:
   QueuePolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
-      Queues: [!Ref 'ServiceEcsProcessingQueue']
+      Queues: [!Ref 'ServiceQueue']
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
               AWS:
-                - !GetAtt ServiceQueueProcessingTaskDefTaskRole.Arn
+                - !GetAtt ServiceTaskDefTaskRole.Arn
             Action:
               - sqs:ReceiveMessage
               - sqs:DeleteMessage
-            Resource: !GetAtt ServiceEcsProcessingQueue.Arn
+            Resource: !GetAtt ServiceQueue.Arn
           - Effect: Allow
             Principal:
               Service: sns.amazonaws.com
             Action:
               - sqs:SendMessage
-            Resource: !GetAtt ServiceEcsProcessingQueue.Arn
+            Resource: !GetAtt ServiceQueue.Arn
             Condition:
               ArnEquals:
                 aws:SourceArn: '{{environment.outputs.SNSTopicArn}}'
@@ -65,8 +65,8 @@ Resources:
     Properties:
       TopicArn: '{{environment.outputs.SNSTopicArn}}'
       Protocol: 'sqs'
-      Endpoint: !GetAtt ServiceEcsProcessingQueue.Arn
-  ServiceQueueProcessingTaskDefTaskRole:
+      Endpoint: !GetAtt ServiceQueue.Arn
+  ServiceTaskDefTaskRole:
     Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
@@ -76,7 +76,7 @@ Resources:
             Principal:
               Service: ecs-tasks.amazonaws.com
         Version: 2012-10-17
-  ServiceQueueProcessingTaskDefTaskRoleDefaultPolicy:
+  ServiceTaskDefTaskRoleDefaultPolicy:
     Type: 'AWS::IAM::Policy'
     Properties:
       PolicyDocument:
@@ -89,23 +89,23 @@ Resources:
               - 'sqs:GetQueueAttributes'
             Effect: Allow
             Resource: !GetAtt 
-              - ServiceEcsProcessingQueue
+              - ServiceQueue
               - Arn
         Version: 2012-10-17
-      PolicyName: ServiceQueueProcessingTaskDefTaskRoleDefaultPolicy
+      PolicyName: ServiceTaskDefTaskRoleDefaultPolicy
       Roles:
-        - !Ref ServiceQueueProcessingTaskDefTaskRole
-  ServiceQueueProcessingTaskDef:
+        - !Ref ServiceTaskDefTaskRole
+  ServiceTaskDef:
     Type: 'AWS::ECS::TaskDefinition'
     Properties:
       ContainerDefinitions:
         - Environment:
             - Name: QUEUE_NAME
               Value: !GetAtt 
-                - ServiceEcsProcessingQueue
+                - ServiceQueue
                 - QueueName
             - Name: QUEUE_URI
-              Value: !Ref ServiceEcsProcessingQueue
+              Value: !Ref ServiceQueue
             - Name: QUEUE_REGION
               Value: !Ref 'AWS::Region'
           Essential: true
@@ -113,7 +113,7 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Ref ServiceQueueProcessingTaskDefLogGroup
+              awslogs-group: !Ref ServiceTaskDefLogGroup
               awslogs-stream-prefix: '{{service.name}}/{{service_instance.name}}'
               awslogs-region: !Ref 'AWS::Region'
           Name: '{{service_instance.name}}'
@@ -125,13 +125,13 @@ Resources:
       RequiresCompatibilities:
         - EC2
       TaskRoleArn: !GetAtt 
-        - ServiceQueueProcessingTaskDefTaskRole
+        - ServiceTaskDefTaskRole
         - Arn
-  ServiceQueueProcessingTaskDefLogGroup:
+  ServiceTaskDefLogGroup:
     Type: 'AWS::Logs::LogGroup'
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain
-  ServiceQueueProcessingECSEC2Service:
+  Service:
     Type: 'AWS::ECS::Service'
     Properties:
       Cluster: '{{environment.outputs.Cluster}}'
@@ -143,8 +143,8 @@ Resources:
       EnableECSManagedTags: false
       LaunchType: EC2
       SchedulingStrategy: REPLICA
-      TaskDefinition: !Ref ServiceQueueProcessingTaskDef
-  ServiceQueueProcessingECSEC2ServiceSecurityGroup:
+      TaskDefinition: !Ref ServiceTaskDef
+  ServiceSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Automatically created Security Group for the Service
@@ -153,7 +153,7 @@ Resources:
           Description: Allow all outbound traffic by default
           IpProtocol: '-1'
       VpcId: '{{environment.outputs.VPC}}'
-  ServiceQueueProcessingECSEC2ServiceTaskCountTarget:
+  TaskCountTarget:
     Type: 'AWS::ApplicationAutoScaling::ScalableTarget'
     Properties:
       MaxCapacity: 10
@@ -164,58 +164,58 @@ Resources:
           - '{{environment.outputs.Cluster}}'
           - /
           - !GetAtt 
-            - ServiceQueueProcessingECSEC2Service
+            - Service
             - Name
       RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
       ScalableDimension: 'ecs:service:DesiredCount'
       ServiceNamespace: ecs
-  ServiceQueueProcessingECSEC2ServiceTaskCountTargetCpuScaling:
+  TargetCpuScaling:
     Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
     Properties:
       PolicyName: WorkerECSEC2ServiceTaskCountTargetCpuScaling
       PolicyType: TargetTrackingScaling
-      ScalingTargetId: !Ref ServiceQueueProcessingECSEC2ServiceTaskCountTarget
+      ScalingTargetId: !Ref TaskCountTarget
       TargetTrackingScalingPolicyConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ECSServiceAverageCPUUtilization
         TargetValue: 50
-  ServiceQueueProcessingECSEC2ServiceTaskCountTargetQueueMessagesVisibleScalingLowerPolicy:
+  QueueMessagesVisibleScalingLowerPolicy:
     Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
     Properties:
       PolicyName: WorkerECSEC2ServiceTaskCountTargetQueueMessagesVisibleScalingLowerPolicy
       PolicyType: StepScaling
-      ScalingTargetId: !Ref ServiceQueueProcessingECSEC2ServiceTaskCountTarget
+      ScalingTargetId: !Ref TaskCountTarget
       StepScalingPolicyConfiguration:
         AdjustmentType: ChangeInCapacity
         MetricAggregationType: Maximum
         StepAdjustments:
           - MetricIntervalUpperBound: 0
             ScalingAdjustment: -1
-  ServiceQueueProcessingECSEC2ServiceTaskCountTargetQueueMessagesVisibleScalingLowerAlarm:
+  QueueMessagesVisibleLowerAlarm:
     Type: 'AWS::CloudWatch::Alarm'
     Properties:
       ComparisonOperator: LessThanOrEqualToThreshold
       EvaluationPeriods: 1
       AlarmActions: 
         - !Ref >-
-          ServiceQueueProcessingECSEC2ServiceTaskCountTargetQueueMessagesVisibleScalingLowerPolicy
+          QueueMessagesVisibleScalingLowerPolicy
       AlarmDescription: Lower threshold scaling alarm
       Dimensions:
         - Name: QueueName
           Value: !GetAtt 
-            - ServiceEcsProcessingQueue
+            - ServiceQueue
             - QueueName
       MetricName: ApproximateNumberOfMessagesVisible
       Namespace: AWS/SQS
       Period: 300
       Statistic: Maximum
       Threshold: 0
-  ServiceQueueProcessingECSEC2ServiceTaskCountTargetQueueMessagesVisibleScalingUpperPolicy:
+  QueueMessagesVisibleScalingUpperPolicy:
     Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
     Properties:
       PolicyName: WorkerECSEC2ServiceTaskCountTargetQueueMessagesVisibleScalingUpperPolicy
       PolicyType: StepScaling
-      ScalingTargetId: !Ref ServiceQueueProcessingECSEC2ServiceTaskCountTarget
+      ScalingTargetId: !Ref TaskCountTarget
       StepScalingPolicyConfiguration:
         AdjustmentType: ChangeInCapacity
         MetricAggregationType: Maximum
@@ -225,19 +225,19 @@ Resources:
             ScalingAdjustment: 1
           - MetricIntervalLowerBound: 400
             ScalingAdjustment: 5
-  ServiceQueueProcessingECSEC2ServiceTaskCountTargetQueueMessagesVisibleScalingUpperAlarm:
+  QueueMessagesVisibleUpperAlarm:
     Type: 'AWS::CloudWatch::Alarm'
     Properties:
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       AlarmActions: 
         - !Ref >-
-          ServiceQueueProcessingECSEC2ServiceTaskCountTargetQueueMessagesVisibleScalingUpperPolicy
+          QueueMessagesVisibleScalingUpperPolicy
       AlarmDescription: Upper threshold scaling alarm
       Dimensions:
         - Name: QueueName
           Value: !GetAtt 
-            - ServiceEcsProcessingQueue
+            - ServiceQueue
             - QueueName
       MetricName: ApproximateNumberOfMessagesVisible
       Namespace: AWS/SQS
@@ -247,17 +247,17 @@ Resources:
 Outputs:
   ServiceSQSDeadLetterQueue:
     Value: !GetAtt 
-      - ServiceEcsProcessingDeadLetterQueue
+      - DeadLetterQueue
       - QueueName
   ServiceSQSDeadLetterQueueArn:
     Value: !GetAtt 
-      - ServiceEcsProcessingDeadLetterQueue
+      - DeadLetterQueue
       - Arn
   ServiceSQSQueue:
     Value: !GetAtt 
-      - ServiceEcsProcessingQueue
+      - ServiceQueue
       - QueueName
   ServiceSQSQueueArn:
     Value: !GetAtt 
-      - ServiceEcsProcessingQueue
+      - ServiceQueue
       - Arn
