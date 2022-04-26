@@ -12,19 +12,19 @@ Globals:
 
 Resources:
   # Define DeadLetter Queue 
-  MyDeadLetterQueue:
+  DeadLetterQueue:
     Type: 'AWS::SQS::Queue'
     Properties:
       MessageRetentionPeriod: 1209600
     UpdateReplacePolicy: Delete
     DeletionPolicy: Delete
   # Define the SQS queue
-  MySqsQueue:
+  SQSQueue:
     Type: AWS::SQS::Queue
     Properties:
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt 
-          - MyDeadLetterQueue
+          - DeadLetterQueue
           - Arn
         maxReceiveCount: 3
     UpdateReplacePolicy: Delete
@@ -32,7 +32,7 @@ Resources:
   QueuePolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
-      Queues: [!Ref 'MySqsQueue']
+      Queues: [!Ref 'SQSQueue']
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -42,13 +42,13 @@ Resources:
             Action:
               - sqs:ReceiveMessage
               - sqs:DeleteMessage
-            Resource: !GetAtt MySqsQueue.Arn
+            Resource: !GetAtt SQSQueue.Arn
           - Effect: Allow
             Principal:
               Service: sns.amazonaws.com
             Action:
               - sqs:SendMessage
-            Resource: !GetAtt MySqsQueue.Arn
+            Resource: !GetAtt SQSQueue.Arn
             Condition:
               ArnEquals:
                 aws:SourceArn: '{{environment.outputs.SNSTopicArn}}'
@@ -57,7 +57,7 @@ Resources:
     Properties:
       TopicArn: '{{environment.outputs.SNSTopicArn}}'
       Protocol: 'sqs'
-      Endpoint: !GetAtt MySqsQueue.Arn
+      Endpoint: !GetAtt SQSQueue.Arn
   # Lambda Function - uses Globals to define additional configuration values
   # Define the consumer Lambda function
   LambdaFunction:
@@ -86,7 +86,7 @@ Resources:
         MySQSEvent:
           Type: SQS
           Properties:
-            Queue: !GetAtt MySqsQueue.Arn
+            Queue: !GetAtt SQSQueue.Arn
             BatchSize: 10
       Policies:
         - AWSLambdaVPCAccessExecutionRole
@@ -107,13 +107,13 @@ Outputs:
     Value: !Ref LambdaFunction
   SQSqueueName:
     Description: SNS queue name
-    Value: !GetAtt MySqsQueue.QueueName
+    Value: !GetAtt SQSQueue.QueueName
   SQSqueueARN:
     Description: SQS queue ARN
-    Value: !GetAtt MySqsQueue.Arn
+    Value: !GetAtt SQSQueue.Arn
   SQSqueueURL:
     Description: SQS queue URL
-    Value: !Ref MySqsQueue
+    Value: !Ref SQSQueue
   LambdaRuntime:
     Description: The lambda runtime
     Value: "{{service_instance.inputs.lambda_runtime}}"
