@@ -46,7 +46,7 @@ Resources:
       Roles:
         - Ref: ServiceAccessRole
   {% if service_instance.inputs.image is defined %}
-  Service:
+  AppRunnerService:
     Type: AWS::AppRunner::Service
     Properties:
       SourceConfiguration:
@@ -76,7 +76,7 @@ Outputs:
   AppRunnerServiceARN:
     Value:
       Fn::GetAtt:
-        - Service
+        - AppRunnerService
         - ServiceArn
   AppRunnerServiceURL:
     Value:
@@ -84,6 +84,6 @@ Outputs:
         - ""
         - - https://
           - Fn::GetAtt:
-              - Service
+              - AppRunnerService
               - ServiceUrl
   {% endif %}

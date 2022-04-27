@@ -7,7 +7,7 @@ schema:
   types:
     ApprunnerServiceInput:
       type: object
-      description: "Input properties for a loadbalanced Fargate service"
+      description: "Input properties for the App runner service"
       properties:
         port:
           type: number
