@@ -1,8 +1,8 @@
 ## Description
 
-This template is compatible with the [vpc-env](../../environment-templates/vpc-env) template. It creates an Amazon API Gateway HTTP API that invokes an AWS Lambda function. The Lambda function is connect to the VPC in order to access private resources while the function is running. The function can be configured to run in a Public subnet or a Privat subnet using the subnet_type parameter. 
+This template is compatible with the [vpc-env](../../environment-templates/vpc-env) template. It creates an Amazon API Gateway HTTP API that invokes an AWS Lambda function. The Lambda function is connect to the VPC in order to access private resources while the function is running. The function can be configured to run in a public subnet or a private subnet using the subnet_type parameter. 
 
-Connecting the function to the public subnet doesn't give it internet access or a public IP address. To give your function access to the internet, route outbound traffic to the NAT gateway in the public subnet. The NAT gateway has a public IP address and can connect to the internet through the VPC's internet gateway. Please see [Lambda Networking](https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html) for more info. Since the private subnet has internet access through the NAT Gateway, lambda functions instantiated inside the private subnet will have internet access. 
+Connecting the function to the public subnet doesn't give it internet access or a public IP address. To give your function access to the internet, route outbound traffic to the NAT gateway in the public subnet. The NAT gateway has a public IP address and can connect to the internet through the VPC's internet gateway. Please see [Lambda Networking](https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html) for more info. Since the private subnet has internet access through the NAT Gateway, Lambda functions instantiated inside the private subnet will have internet access. 
 
 Lambda function parameters like the function handler, runtime, memory size, timeout limit, and function code's Amazon S3 URI can be specified through the service input parameters.
 
