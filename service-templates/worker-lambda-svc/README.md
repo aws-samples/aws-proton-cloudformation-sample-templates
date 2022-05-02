@@ -6,7 +6,7 @@ The Lambda function is connect to the VPC in order to access private resources w
 
 Lambda function parameters like the function handler, runtime, memory size, timeout limit, and function code's Amazon S3 URI can be specified through the service input parameters.
 
-The template also provisions a CodePipeline based pipeline to pull your application source code before building and deploying it to the Proton service. To use sample application code, please fork the sample code repository [aws-proton-sample-services](https://github.com/aws-samples/aws-proton-sample-services). By default, the template deploys a [function](https://github.com/aws-samples/aws-proton-sample-services/tree/main/lambda-ping-sns) to send a random string and time to the shared SNS topic every 5 minutes. Function in the Public subnet will use VPC Endpoint to access the SNS topic. Function connected to the private subnet uses NAT and internet gateway to reach the SNS topic. 
+The template also provisions a CodePipeline based pipeline to pull your application source code before building and deploying it to the Proton service. To use sample application code, please fork the sample code repository [aws-proton-sample-services](https://github.com/aws-samples/aws-proton-sample-services). By default, the template deploys a [function](https://github.com/aws-samples/aws-proton-sample-services/tree/main/lambda-worker) that writes the event, context object and SQS message to CloudWatch Logs. 
 
 ## Architecture
 
