@@ -9,7 +9,6 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: 'AES256'
-  {% if pipeline.inputs.environment_account_ids %}
   # This policy allows environment accounts to get the build artifacts from FunctionBucket in the management account
   FunctionBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -28,11 +27,9 @@ Resources:
                 - /*
             Principal:
               AWS:
-                {% set environment_account_ids = pipeline.inputs.environment_account_ids.split(',') %}
-                {% for environment_account_id in environment_account_ids %}
-                - "arn:aws:iam::{{environment_account_id}}:root"
+                {% for service_instance in service_instances %}
+                - "arn:aws:iam::{{service_instance.environment.account_id}}:root"
                 {% endfor %}
-  {% endif %}
   BuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -541,6 +538,7 @@ Resources:
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
+      RestartExecutionOnUpdate: true
       RoleArn:
         Fn::GetAtt:
           - PipelineRole
