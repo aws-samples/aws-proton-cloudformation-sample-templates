@@ -35,7 +35,7 @@ schema:
           enum: ["public", "private"]
           default: "public"
         loadbalancer_type:
-          title: "Load Balancer Type"	  
+          title: "Load Balancer Type"
           type: string
           description: "Type of loadbalancer to front your service"
           enum: ["application", "network"]
