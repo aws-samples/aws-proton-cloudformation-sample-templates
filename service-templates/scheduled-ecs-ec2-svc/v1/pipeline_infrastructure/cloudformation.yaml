@@ -2,7 +2,6 @@ Resources:
   ECRRepo:
     Type: AWS::ECR::Repository
     DeletionPolicy: Retain
-    {% if pipeline.inputs.environment_account_ids %}
     Properties:
       # This policy allows environment accounts to get the image from ECRRepo in the management account
       RepositoryPolicyText:
@@ -12,16 +11,14 @@ Resources:
             Effect: Allow
             Principal:
               AWS:
-                {% set environment_account_ids = pipeline.inputs.environment_account_ids.split(',') %}
-                {% for environment_account_id in environment_account_ids %}
-                - "arn:aws:iam::{{environment_account_id}}:root"
+                {% for service_instance in service_instances %}
+                - "arn:aws:iam::{{service_instance.environment.account_id}}:root"
                 {% endfor %}
             Action:
               - ecr:GetAuthorizationToken
               - ecr:BatchCheckLayerAvailability
               - ecr:GetDownloadUrlForLayer
               - ecr:BatchGetImage
-    {% endif %}
   BuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -532,6 +529,7 @@ Resources:
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
+      RestartExecutionOnUpdate: true
       RoleArn:
         Fn::GetAtt:
           - PipelineRole
