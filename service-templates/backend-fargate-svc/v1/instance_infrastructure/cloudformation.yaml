@@ -169,3 +169,7 @@ Resources:
         PredefinedMetricSpecification:
           PredefinedMetricType: ECSServiceAverageMemoryUtilization
         TargetValue: 50
+Outputs:
+  BackendURL:
+    Description: Type A DNS record for Service Discovery
+    Value: "{{service_instance.name}}.{{service.name}}.{{environment.name}}.local:{{service_instance.inputs.port}}"
