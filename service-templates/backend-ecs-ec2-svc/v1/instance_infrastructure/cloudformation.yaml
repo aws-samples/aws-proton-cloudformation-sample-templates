@@ -148,3 +148,7 @@ Resources:
         PredefinedMetricSpecification:
           PredefinedMetricType: ECSServiceAverageMemoryUtilization
         TargetValue: 50
+Outputs:
+  BackendURL:
+    Description: Type SRV DNS record for Service Discovery
+    Value: "{{service_instance.name}}.{{service.name}}.{{environment.name}}.local"
