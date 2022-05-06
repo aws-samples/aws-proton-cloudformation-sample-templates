@@ -30,6 +30,11 @@ The template also provisions a CodePipeline based pipeline to pull your applicat
 3. unit_test_command: The command to run to unit test the application code
 4. environment_account_ids: The environment account ids for service instances using cross account environment
 
+## Test
+The load-balanced service can be tested by deploying the [ecs-static-website](https://github.com/aws-samples/aws-proton-sample-services/tree/main/ecs-static-website) application that deploys a static website. Expected response when you access the Service URL through the browser:
+
+![proton-static-website](../../images/proton-static-website.png)
+
 ## Security
 
 See [CONTRIBUTING](../../CONTRIBUTING.md#security-issue-notifications) for more information.

@@ -31,7 +31,7 @@ The template also provisions a CodePipeline based pipeline to pull your applicat
 4. environment_account_ids: The environment account ids for service instances using cross account environment
 
 ## Test
-This backend service can be tested by deploying a [load-balanced-fargate-svc](../load-balanced-fargate-svc) that runs [ecs-ping-backend-a-record](https://github.com/aws-samples/aws-proton-sample-services/tree/main/ecs-ping-backend-a-record) application code to ping the backend service using service discovery. Expected response:
+This backend service can be tested by deploying the [ecs-backend](https://github.com/aws-samples/aws-proton-sample-services/tree/main/ecs-backend) application that responds with a Hello message. We can then deploy a [load-balanced-fargate-svc](../load-balanced-fargate-svc) that runs [ecs-ping-backend-a-record](https://github.com/aws-samples/aws-proton-sample-services/tree/main/ecs-ping-backend-a-record) application to perform a HTTP call to the BackendURL A record from backend service output. Expected response when you access the the service URL for your load-balanced service through the browser:
 ```
 {"backend_response": "Hello from backend-svc. Time: Tuesday, April 26 2022, 04:15:28"}
 ```

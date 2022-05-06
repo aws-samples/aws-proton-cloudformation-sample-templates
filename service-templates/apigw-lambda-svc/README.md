@@ -34,6 +34,16 @@ The template also provisions a CodePipeline based pipeline to pull your applicat
 3. packaging_command: The commands which packages your code into a file called function.zip
 4. environment_account_ids: The environment account ids for service instances using cross account environment
 
+## Test
+This API Gateway service can be tested by deploying the [lambda-ping-sns](https://github.com/aws-samples/aws-proton-sample-services/tree/main/lambda-ping-sns) function that sends a random message to the shared SNS topic. Expected response when you access the HTTP API Endpoint through the browser:
+```
+{
+  "functionName": "apigw-lambda-svc-prod-function",
+  "SNS_Message": "Message cliljuwybqh sent at Thu May 05 2022 21:22:16 GMT+0000 (Coordinated Universal Time)",
+  "SNS_Subject": "New message from publisher"
+}
+```
+
 ## Security
 
 See [CONTRIBUTING](../../CONTRIBUTING.md#security-issue-notifications) for more information.
