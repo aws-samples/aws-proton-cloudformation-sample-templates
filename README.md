@@ -11,7 +11,7 @@ If you are looking for sample templates to use Terraform go to our [AWS Proton T
 
 
 ## Registering Templates Using Template Sync
-All of the Templates in this directory are set up to work with AWS Proton Template Sync. This repository is also a Template Repository. So you can click "Use this template" on the home page of this repo and that will create an identical repo in your account, which you can then use with template sync.
+All of the Templates in this directory are set up to work with AWS Proton Template Sync. This repository is also a Github Template Repository. So you can click "Use this template" on the home page of this repo and that will create an identical repo in your account, which you can then use with template sync.
 
 ## Security
 See CONTRIBUTING for more information.
