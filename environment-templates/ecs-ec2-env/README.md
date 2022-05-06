@@ -28,7 +28,7 @@ The environment supports asynchronous service-to-service communication using a p
 7. DesiredCapacity: Number of EC2 instances to launch in your ECS cluster
 8. MaxSize: Maximum number of EC2 instances that can be launched in your ECS cluster
 9. ECSAMI: AMI used to launch the EC2 instances
-10.InstanceType: EC2 instance type
+10. InstanceType: EC2 instance type
 
 ## Security
 
