@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SQS-Lambda based Worker service template
+
+Globals:
+  Function:
+    Runtime: {{service_instance.inputs.lambda_runtime}}
+    MemorySize: {{service_instance.inputs.lambda_memory}}
+    Timeout: {{service_instance.inputs.lambda_timeout}}
+    Tracing: Active
+
+
+Resources:
+  # Lambda Function - uses Globals to define additional configuration values
+  # Define the consumer Lambda function and EventBridge rule
+  LambdaFunction:
+    Type: AWS::Serverless::Function
+    Description: Invoked by EventBridge rule
+    Properties:
+      {% if service_instance.inputs.code_uri is defined %}
+      Handler: {{service_instance.inputs.lambda_handler}}
+      CodeUri: {{service_instance.inputs.code_uri}}
+      {% else %}
+      Handler: index.handler
+      InlineCode: |
+        exports.handler = async (event, context) => {
+          try {
+            // Log event and context object to CloudWatch Logs
+            console.log("Event: ", JSON.stringify(event, null, 2));
+            console.log("Context: ", JSON.stringify(context, null, 2));
+            return {};
+          } catch (error) {
+            console.error(error);
+            throw new Error(error);
+          }
+        };
+      {% endif %}
+      FunctionName: '{{service_instance.name}}-function'
+      Events:
+        Trigger:
+          Type: Schedule 
+          Properties:
+            Schedule: '{{service_instance.inputs.schedule_expression}}'
+            Enabled: true
+      Environment:
+        Variables:
+          SNSTopicArn: '{{environment.outputs.SNSTopicArn}}'
+      Policies:
+        - AWSLambdaVPCAccessExecutionRole
+        - SNSPublishMessagePolicy:
+            TopicName: '{{environment.outputs.SNSTopicName}}'
+      VpcConfig:
+        SecurityGroupIds:
+          - '{{environment.outputs.VPCSecurityGroup}}'
+        SubnetIds:
+        {% if service_instance.inputs.subnet_type == 'private' %}
+            - '{{environment.outputs.PrivateSubnet1}}'
+            - '{{environment.outputs.PrivateSubnet2}}'
+        {% else %}
+            - '{{environment.outputs.PublicSubnet1}}'
+            - '{{environment.outputs.PublicSubnet2}}'
+        {% endif %}
+Outputs:
+  LambdaFunction:
+    Description: LambdaFunction function name
+    Value: !Ref LambdaFunction
+  LambdaRuntime:
+    Description: The lambda runtime
+    Value: "{{service_instance.inputs.lambda_runtime}}"

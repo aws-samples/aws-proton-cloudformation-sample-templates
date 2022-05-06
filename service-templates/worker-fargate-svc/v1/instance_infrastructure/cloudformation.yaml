@@ -1,0 +1,281 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy a service on AWS Fargate service to implement asynchronous 
+             service-to-service communication with pub/sub architecture.
+Mappings:
+  TaskSize:
+    x-small:
+      cpu: 256
+      memory: 512
+    small:
+      cpu: 512
+      memory: 1024
+    medium:
+      cpu: 1024
+      memory: 2048
+    large:
+      cpu: 2048
+      memory: 4096
+    x-large:
+      cpu: 4096
+      memory: 8192
+
+Resources:
+  DeadLetterQueue:
+    Type: 'AWS::SQS::Queue'
+    Properties:
+      MessageRetentionPeriod: 1209600
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+  ServiceQueue:
+    Type: 'AWS::SQS::Queue'
+    Properties:
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt 
+          - DeadLetterQueue
+          - Arn
+        maxReceiveCount: 3
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+  QueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref 'ServiceQueue']
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !GetAtt ServiceTaskDefTaskRole.Arn
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+            Resource: !GetAtt ServiceQueue.Arn
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt ServiceQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: '{{environment.outputs.SNSTopicArn}}'
+  pingSNSTopicSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: '{{environment.outputs.SNSTopicArn}}'
+      Protocol: 'sqs'
+      Endpoint: !GetAtt ServiceQueue.Arn
+  ServiceTaskDefTaskRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: 2012-10-17
+  ServiceTaskDefTaskRoleDefaultPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - 'sqs:ReceiveMessage'
+              - 'sqs:ChangeMessageVisibility'
+              - 'sqs:GetQueueUrl'
+              - 'sqs:DeleteMessage'
+              - 'sqs:GetQueueAttributes'
+            Effect: Allow
+            Resource: !GetAtt 
+              - ServiceQueue
+              - Arn
+        Version: 2012-10-17
+      PolicyName: ServiceTaskDefTaskRoleDefaultPolicy
+      Roles:
+        - !Ref ServiceTaskDefTaskRole
+  ServiceTaskDef:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Environment:
+            - Name: QUEUE_NAME
+              Value: !GetAtt 
+                - ServiceQueue
+                - QueueName
+            - Name: QUEUE_URI
+              Value: !Ref ServiceQueue
+            - Name: QUEUE_REGION
+              Value: !Ref 'AWS::Region'
+          Essential: true
+          Image: '{{service_instance.inputs.image}}'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref ServiceTaskDefLogGroup
+              awslogs-stream-prefix: '{{service.name}}/{{service_instance.name}}'
+              awslogs-region: !Ref 'AWS::Region'
+          Name: '{{service_instance.name}}'
+      Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
+      ExecutionRoleArn: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
+      Family: '{{service.name}}_{{service_instance.name}}'
+      Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      TaskRoleArn: !GetAtt 
+        - ServiceTaskDefTaskRole
+        - Arn
+  ServiceTaskDefLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+  Service:
+    Type: 'AWS::ECS::Service'
+    Properties:
+      Cluster: '{{environment.outputs.Cluster}}'
+      ServiceName: '{{service.name}}_{{service_instance.name}}'
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 50
+      DesiredCount: '{{service_instance.inputs.desired_count}}'
+      EnableECSManagedTags: false
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+        {% if service_instance.inputs.subnet_type == 'private' %}
+          AssignPublicIp: DISABLED
+        {% else %}
+          AssignPublicIp: ENABLED
+        {% endif %}
+          SecurityGroups:
+            - !GetAtt 
+              - ServiceSecurityGroup
+              - GroupId
+          Subnets:
+          {% if service_instance.inputs.subnet_type == 'private' %}
+            - '{{environment.outputs.PrivateSubnet1}}'
+            - '{{environment.outputs.PrivateSubnet2}}'
+          {% else %}
+            - '{{environment.outputs.PublicSubnet1}}'
+            - '{{environment.outputs.PublicSubnet2}}'
+          {% endif %}
+      TaskDefinition: !Ref ServiceTaskDef
+  ServiceSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Automatically created Security Group for the Service
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: '-1'
+      VpcId: '{{environment.outputs.VPC}}'
+  TaskCountTarget:
+    Type: 'AWS::ApplicationAutoScaling::ScalableTarget'
+    Properties:
+      MaxCapacity: 10
+      MinCapacity: 1
+      ResourceId: !Join 
+        - ''
+        - - service/
+          - '{{environment.outputs.Cluster}}'
+          - /
+          - !GetAtt 
+            - Service
+            - Name
+      RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
+      ScalableDimension: 'ecs:service:DesiredCount'
+      ServiceNamespace: ecs
+  TargetCpuScaling:
+    Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
+    Properties:
+      PolicyName: WorkerFargateServiceTaskCountTargetCpuScaling
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref TaskCountTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        TargetValue: 50
+  QueueMessagesVisibleScalingLowerPolicy:
+    Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
+    Properties:
+      PolicyName: WorkerFargateServiceTaskCountTargetQueueMessagesVisibleScalingLowerPolicy
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref TaskCountTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        MetricAggregationType: Maximum
+        StepAdjustments:
+          - MetricIntervalUpperBound: 0
+            ScalingAdjustment: -1
+  QueueMessagesVisibleLowerAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      ComparisonOperator: LessThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      AlarmActions: 
+        - !Ref >-
+          QueueMessagesVisibleScalingLowerPolicy
+      AlarmDescription: Lower threshold scaling alarm
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt 
+            - ServiceQueue
+            - QueueName
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Period: 300
+      Statistic: Maximum
+      Threshold: 0
+  QueueMessagesVisibleScalingUpperPolicy:
+    Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
+    Properties:
+      PolicyName: WorkerFargateServiceTaskCountTargetQueueMessagesVisibleScalingUpperPolicy
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref TaskCountTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: ChangeInCapacity
+        MetricAggregationType: Maximum
+        StepAdjustments:
+          - MetricIntervalLowerBound: 0
+            MetricIntervalUpperBound: 400
+            ScalingAdjustment: 1
+          - MetricIntervalLowerBound: 400
+            ScalingAdjustment: 5
+  QueueMessagesVisibleUpperAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      AlarmActions: 
+        - !Ref >-
+          QueueMessagesVisibleScalingUpperPolicy
+      AlarmDescription: Upper threshold scaling alarm
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt 
+            - ServiceQueue
+            - QueueName
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Period: 300
+      Statistic: Maximum
+      Threshold: 100
+Outputs:
+  ServiceSQSDeadLetterQueue:
+    Value: !GetAtt 
+      - DeadLetterQueue
+      - QueueName
+  ServiceSQSDeadLetterQueueArn:
+    Value: !GetAtt 
+      - DeadLetterQueue
+      - Arn
+  ServiceSQSQueue:
+    Value: !GetAtt 
+      - ServiceQueue
+      - QueueName
+  ServiceSQSQueueArn:
+    Value: !GetAtt 
+      - ServiceQueue
+      - Arn

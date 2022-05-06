@@ -1,0 +1,120 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy a scheduled ECS task on EC2 that will be initiated off of EventBridge Events.
+
+Mappings:
+  TaskSize:
+    x-small:
+      cpu: 256
+      memory: 512
+    small:
+      cpu: 512
+      memory: 1024
+    medium:
+      cpu: 1024
+      memory: 2048
+    large:
+      cpu: 2048
+      memory: 4096
+    x-large:
+      cpu: 4096
+      memory: 8192
+
+Resources:
+  ScheduledEventRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      ScheduleExpression: '{{service_instance.inputs.schedule_expression}}'
+      State: ENABLED
+      Targets:
+        - Arn: '{{environment.outputs.ClusterArn}}'
+          EcsParameters:
+            TaskCount: '{{service_instance.inputs.desired_count}}'
+            TaskDefinitionArn: !Ref ScheduledTaskDef
+          Id: Target0
+          Input: '{}'
+          RoleArn: !GetAtt 
+            - ScheduledTaskDefEventsRole
+            - Arn
+  ScheduledTaskDefTaskRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: 2012-10-17
+      Policies:
+        - PolicyName: 'Publish2SNS'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'sns:Publish'
+                Resource: '{{environment.outputs.SNSTopicArn}}'
+  ScheduledTaskDef:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Essential: true
+          Image: '{{service_instance.inputs.image}}'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref ScheduledTaskDefLogGroup
+              awslogs-stream-prefix: '{{service.name}}/{{service_instance.name}}'
+              awslogs-region: !Ref 'AWS::Region'
+          Name: '{{service_instance.name}}'
+          Environment:
+            - Name: SNS_TOPIC_ARN
+              Value: '{"ping":"{{environment.outputs.SNSTopicArn}}"}'
+            - Name: SNS_REGION
+              Value: "{{environment.outputs.SNSRegion}}"
+          Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
+          Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
+      ExecutionRoleArn: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
+      Family: '{{service.name}}_{{service_instance.name}}'
+      NetworkMode: bridge
+      RequiresCompatibilities:
+        - EC2
+      TaskRoleArn: !GetAtt 
+        - ScheduledTaskDefTaskRole
+        - Arn
+  ScheduledTaskDefLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+  ScheduledTaskDefEventsRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+        Version: 2012-10-17
+  ScheduledTaskDefEventsRoleDefaultPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: 'ecs:RunTask'
+            Condition:
+              ArnEquals:
+                'ecs:cluster': '{{environment.outputs.ClusterArn}}'
+            Effect: Allow
+            Resource: !Ref ScheduledTaskDef
+          - Action: 'iam:PassRole'
+            Effect: Allow
+            Resource: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
+          - Action: 'iam:PassRole'
+            Effect: Allow
+            Resource: !GetAtt 
+              - ScheduledTaskDefTaskRole
+              - Arn
+        Version: 2012-10-17
+      PolicyName: ScheduledTaskDefEventsRoleDefaultPolicy
+      Roles:
+        - !Ref ScheduledTaskDefEventsRole

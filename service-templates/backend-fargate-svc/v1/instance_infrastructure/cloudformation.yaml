@@ -1,0 +1,175 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy a Backend service on AWS Fargate, hosted in a public or private subnet, 
+             and accessible via Service Discovery A Record.
+Mappings:
+  TaskSize:
+    x-small:
+      cpu: 256
+      memory: 512
+    small:
+      cpu: 512
+      memory: 1024
+    medium:
+      cpu: 1024
+      memory: 2048
+    large:
+      cpu: 2048
+      memory: 4096
+    x-large:
+      cpu: 4096
+      memory: 8192
+
+Resources:
+  ServiceTaskDefTaskRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: 2012-10-17
+      Policies:
+        - PolicyName: 'Publish2SNS'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'sns:Publish'
+                Resource: '{{environment.outputs.SNSTopicArn}}'
+  ServiceTaskDef:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Essential: true
+          Image: '{{service_instance.inputs.image}}'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref ServiceTaskDefLogGroup
+              awslogs-stream-prefix: '{{service.name}}/{{service_instance.name}}'
+              awslogs-region: !Ref 'AWS::Region'
+          Name: '{{service_instance.name}}'
+          PortMappings:
+            - ContainerPort: '{{service_instance.inputs.port}}'
+              Protocol: tcp
+          Environment:
+            - Name: SNS_TOPIC_ARN
+              Value: '{"ping":"{{environment.outputs.SNSTopicArn}}"}'
+            - Name: SNS_REGION
+              Value: "{{environment.outputs.SNSRegion}}"
+      Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
+      ExecutionRoleArn: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
+      Family: '{{service.name}}_{{service_instance.name}}'
+      Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      TaskRoleArn: !GetAtt 
+        - ServiceTaskDefTaskRole
+        - Arn
+  ServiceTaskDefLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+  Service:
+    Type: 'AWS::ECS::Service'
+    Properties:
+      ServiceName: '{{service.name}}_{{service_instance.name}}'
+      Cluster: '{{environment.outputs.Cluster}}'
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 50
+      DesiredCount: '{{service_instance.inputs.desired_count}}'
+      EnableECSManagedTags: false
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+        {% if service_instance.inputs.subnet_type == 'private' %}
+          AssignPublicIp: DISABLED
+        {% else %}
+          AssignPublicIp: ENABLED
+        {% endif %}
+          SecurityGroups:
+            - !GetAtt 
+              - ServiceSecurityGroup
+              - GroupId
+          Subnets:
+          {% if service_instance.inputs.subnet_type == 'private' %}
+            - '{{environment.outputs.PrivateSubnet1}}'
+            - '{{environment.outputs.PrivateSubnet2}}'
+          {% else %}
+            - '{{environment.outputs.PublicSubnet1}}'
+            - '{{environment.outputs.PublicSubnet2}}'
+          {% endif %}
+      ServiceRegistries:
+        - RegistryArn: !GetAtt 
+            - CloudMapService
+            - Arn
+      TaskDefinition: !Ref ServiceTaskDef
+  CloudMapService:
+    Type: 'AWS::ServiceDiscovery::Service'
+    Properties:
+      DnsConfig:
+        DnsRecords:
+          - TTL: 60
+            Type: A
+        NamespaceId: '{{environment.outputs.CloudMapNamespaceId}}'
+        RoutingPolicy: MULTIVALUE
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+      Name: '{{service_instance.name}}.{{service.name}}'
+      NamespaceId: '{{environment.outputs.CloudMapNamespaceId}}'
+  ServiceSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Automatically created Security Group for the Service
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all inbound traffic by default
+          IpProtocol: '-1'
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: '-1'
+      VpcId: '{{environment.outputs.VPC}}'
+  TaskCountTarget:
+    Type: 'AWS::ApplicationAutoScaling::ScalableTarget'
+    DependsOn: Service
+    Properties:
+      MaxCapacity: 10
+      MinCapacity: 1
+      ResourceId: !Join 
+        - ''
+        - - service/
+          - '{{environment.outputs.Cluster}}'
+          - /
+          - '{{service.name}}_{{service_instance.name}}'
+      RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
+      ScalableDimension: 'ecs:service:DesiredCount'
+      ServiceNamespace: ecs
+  TaskCountTargetCpuScaling:
+    Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
+    Properties:
+      PolicyName: BackendFargateServiceTaskCountTargetCpuScaling
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref TaskCountTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        TargetValue: 50
+  TaskCountTargetMemoryScaling:
+    Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
+    Properties:
+      PolicyName: BackendFargateServiceTaskCountTargetMemoryScaling
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref TaskCountTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageMemoryUtilization
+        TargetValue: 50
+Outputs:
+  BackendURL:
+    Description: Type A DNS record for Service Discovery
+    Value: "{{service_instance.name}}.{{service.name}}.{{environment.name}}.local:{{service_instance.inputs.port}}"
