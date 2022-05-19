@@ -564,7 +564,6 @@ Resources:
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      RestartExecutionOnUpdate: true
       RoleArn:
         Fn::GetAtt:
           - PipelineRole
