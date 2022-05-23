@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Deploy a service on AWS Fargate, hosted in a public or private subnet, 
+Description: Deploy a service on AWS Fargate, hosted in a public or private subnet,
              and accessible via a public load balancer.
 Mappings:
   TaskSize:
@@ -29,7 +29,7 @@ Resources:
       Scheme: internet-facing
       {% if service_instance.inputs.loadbalancer_type == 'application' %}
       SecurityGroups:
-        - !GetAtt 
+        - !GetAtt
           - LoadBalancerSecurityGroup
           - GroupId
       {% endif %}
@@ -52,19 +52,19 @@ Resources:
   LoadBalancerSecurityGrouptoServiceSecurityGroup:
     Type: 'AWS::EC2::SecurityGroupEgress'
     Properties:
-      GroupId: !GetAtt 
+      GroupId: !GetAtt
         - LoadBalancerSecurityGroup
         - GroupId
       IpProtocol: tcp
       Description: Load balancer to target
-      DestinationSecurityGroupId: !GetAtt 
+      DestinationSecurityGroupId: !GetAtt
         - ServiceSecurityGroup
         - GroupId
       FromPort: 80
       ToPort: 80
       {% else %}
       Type: network
-      {% endif %}           
+      {% endif %}
   LoadBalancerPublicListener:
     Type: 'AWS::ElasticLoadBalancingV2::Listener'
     Properties:
@@ -77,7 +77,7 @@ Resources:
       Protocol: HTTP
       {% else %}
       Protocol: TCP
-      {% endif %}              
+      {% endif %}
   LoadBalancerPublicListenerECSGroup:
     Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
     Properties:
@@ -89,7 +89,7 @@ Resources:
           Value: 'false'
       {% else %}
       Protocol: TCP
-      {% endif %}              
+      {% endif %}
       TargetType: ip
       VpcId: '{{environment.outputs.VPC}}'
   ServiceTaskDefTaskRole:
@@ -110,6 +110,43 @@ Resources:
               - Effect: 'Allow'
                 Action: 'sns:Publish'
                 Resource: '{{environment.outputs.SNSTopicArn}}'
+      PermissionsBoundary: !Ref TaskRolePermissionBoundaryPolicy
+      ManagedPolicyArns:
+        - !Ref BaseTaskRoleManagedPolicy
+        {{ service_instance.components.custom_runtime.outputs
+            | proton_cfn_iam_policy_arns }}
+
+  # Basic permissions for writing metrics and log events to Cloudwatch, this is something that would typically
+  # be required by every production-ready service.
+  BaseTaskRoleManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "cloudwatch:PutMetricData"
+              - "logs:PutLogEvents"
+            Resource: "*"
+
+  # We expect our developers to never scope permissions for the task outside of these additional guard-rails
+  # for accessing dependencies.
+  TaskRolePermissionBoundaryPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "cloudwatch:PutMetricData"
+              - "logs:PutLogEvents"
+              - 's3:Get*'
+              - 's3:List*'
+              - 's3:PutObject'
+            Resource: '*'
+
   ServiceTaskDef:
     Type: 'AWS::ECS::TaskDefinition'
     Properties:
@@ -140,7 +177,7 @@ Resources:
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
-      TaskRoleArn: !GetAtt 
+      TaskRoleArn: !GetAtt
         - ServiceTaskDefTaskRole
         - Arn
   ServiceTaskDefLogGroup:
@@ -171,7 +208,7 @@ Resources:
           AssignPublicIp: ENABLED
         {% endif %}
           SecurityGroups:
-            - !GetAtt 
+            - !GetAtt
               - ServiceSecurityGroup
               - GroupId
           Subnets:
@@ -183,7 +220,7 @@ Resources:
             - '{{environment.outputs.PublicSubnet2}}'
           {% endif %}
       ServiceRegistries:
-        - RegistryArn: !GetAtt 
+        - RegistryArn: !GetAtt
             - CloudMapService
             - Arn
       TaskDefinition: !Ref ServiceTaskDef
@@ -217,13 +254,13 @@ Resources:
     Properties:
       IpProtocol: tcp
       Description: Load balancer to target
-      GroupId: !GetAtt 
+      GroupId: !GetAtt
         - ServiceSecurityGroup
         - GroupId
       FromPort: 80
       ToPort: 80
       {% if service_instance.inputs.loadbalancer_type == 'application' %}
-      SourceSecurityGroupId: !GetAtt 
+      SourceSecurityGroupId: !GetAtt
         - LoadBalancerSecurityGroup
         - GroupId
       {% else %}
@@ -235,7 +272,7 @@ Resources:
     Properties:
       MaxCapacity: 10
       MinCapacity: 1
-      ResourceId: !Join 
+      ResourceId: !Join
         - ''
         - - service/
           - '{{environment.outputs.Cluster}}'
@@ -266,9 +303,9 @@ Resources:
         TargetValue: 50
 Outputs:
   ServiceURL:
-    Value: !Join 
+    Value: !Join
       - ''
       - - 'http://'
-        - !GetAtt 
+        - !GetAtt
           - LoadBalancer
           - DNSName
