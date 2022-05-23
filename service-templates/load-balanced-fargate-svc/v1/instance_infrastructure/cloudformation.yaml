@@ -140,8 +140,6 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - "cloudwatch:PutMetricData"
-              - "logs:PutLogEvents"
               - 's3:Get*'
               - 's3:List*'
               - 's3:PutObject'
