@@ -113,8 +113,7 @@ Resources:
       PermissionsBoundary: !Ref TaskRolePermissionBoundaryPolicy
       ManagedPolicyArns:
         - !Ref BaseTaskRoleManagedPolicy
-        {{ service_instance.components.custom_runtime.outputs
-            | proton_cfn_iam_policy_arns }}
+        {{ service_instance.component.default.outputs | proton_cfn_iam_policy_arns }}
 
   # Basic permissions for writing metrics and log events to Cloudwatch, this is something that would typically
   # be required by every production-ready service.
@@ -168,6 +167,13 @@ Resources:
               Value: "{{environment.outputs.SNSRegion}}"
             - Name: BACKEND_URL
               Value: "{{service_instance.inputs.backendurl}}"
+            # "Components" - Outputs
+            {% if service_instance.components.default.outputs | length > 0 %}
+              {% for name, value in service_instance.components.default.outputs %}
+            - Name: {{ name }}
+              Value: {{ value }}
+              {% endfor %}
+            {% endif %}
       Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
       ExecutionRoleArn: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
       Family: '{{service.name}}_{{service_instance.name}}'

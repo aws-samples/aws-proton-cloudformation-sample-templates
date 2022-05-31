@@ -35,7 +35,7 @@ The template also provisions a CodePipeline based pipeline to pull your applicat
 
 The service template which you used above will provision a Fargate service with the infrastructure required for networking, monitoring and scaling the service. In practice you may want to use a template like this for many different purposes and can use components to extend the service template to meet your requirements.
 
-Jinja filters will be used to optionally incorporate component outputs of our s3-bucket-component sample which provisions an S3 bucket and defines an IAM Policy for accessing that bucket will be associated with the service instance.
+The s3-bucket-component sample provisions an S3 bucket and defines an IAM Policy for accessing it. If present, the bucket policy and bucket ARN outputs from the s3-bucket-component will be used in the ECS task role and ECS environment variables, respectively.
 
 ## Test
 The load-balanced service can be tested by deploying the [ecs-static-website](https://github.com/aws-samples/aws-proton-sample-services/tree/main/ecs-static-website) application that deploys a static website. Expected response when you access the Service URL through the browser:
