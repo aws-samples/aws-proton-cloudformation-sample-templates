@@ -1,0 +1,13 @@
+proton: ServiceSpec
+
+pipeline:
+  unit_test_command: make test
+  packaging_commands: make publish
+
+instances:
+  - name: "front-end"
+    environment: "multi-svc-beta"
+    spec:
+      resource_name: task
+      resource_handler: src/api
+      lambda_runtime: ruby2.7

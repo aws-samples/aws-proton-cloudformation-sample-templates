@@ -1,0 +1,119 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Simple Lambda based HTTP service template
+
+Globals:
+  Function:
+    Timeout: {{service_instance.inputs.lambda_timeout}}
+    Tracing: Active
+    MemorySize: {{service_instance.inputs.lambda_memory}}
+
+Resources:
+  CrudHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      FailOnWarnings: false
+{% if service_instance.inputs.code_uri is defined %}
+  ListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: "{{service_instance.inputs.code_uri}}"
+      Handler: "{{service_instance.inputs.resource_handler}}.list_{{service_instance.inputs.resource_name}}"
+      Runtime: "{{service_instance.inputs.lambda_runtime}}"
+      Environment:
+        Variables:
+          TABLE_NAME: "{{environment.outputs.TableName}}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: "{{environment.outputs.TableName}}"
+      Events:
+        ListApi:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CrudHttpApi
+            Path: "/{{service_instance.inputs.resource_name}}"
+            Method: GET
+  CreateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: "{{service_instance.inputs.code_uri}}"
+      Handler: "{{service_instance.inputs.resource_handler}}.create_{{service_instance.inputs.resource_name}}"
+      Runtime: "{{service_instance.inputs.lambda_runtime}}"
+      Environment:
+        Variables:
+          TABLE_NAME: "{{environment.outputs.TableName}}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: "{{environment.outputs.TableName}}"
+      Events:
+        CreateApi:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CrudHttpApi
+            Path: "/{{service_instance.inputs.resource_name}}"
+            Method: POST
+  GetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: "{{service_instance.inputs.code_uri}}"
+      Handler: "{{service_instance.inputs.resource_handler}}.get_{{service_instance.inputs.resource_name}}"
+      Runtime: "{{service_instance.inputs.lambda_runtime}}"
+      Environment:
+        Variables:
+          TABLE_NAME: "{{environment.outputs.TableName}}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: "{{environment.outputs.TableName}}"
+      Events:
+        GetApi:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CrudHttpApi
+            Path: "/{{service_instance.inputs.resource_name}}/{id}"
+            Method: GET
+  DeleteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: "{{service_instance.inputs.code_uri}}"
+      Handler: "{{service_instance.inputs.resource_handler}}.delete_{{service_instance.inputs.resource_name}}"
+      Runtime: "{{service_instance.inputs.lambda_runtime}}"
+      Environment:
+        Variables:
+          TABLE_NAME: "{{environment.outputs.TableName}}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: "{{environment.outputs.TableName}}"
+      Events:
+        DeleteApi:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CrudHttpApi
+            Path: "/{{service_instance.inputs.resource_name}}/{id}"
+            Method: DELETE
+  UpdateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: "{{service_instance.inputs.code_uri}}"
+      Handler: "{{service_instance.inputs.resource_handler}}.update_{{service_instance.inputs.resource_name}}"
+      Runtime: "{{service_instance.inputs.lambda_runtime}}"
+      Environment:
+        Variables:
+          TABLE_NAME: "{{environment.outputs.TableName}}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: "{{environment.outputs.TableName}}"
+      Events:
+        UpdateApi:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CrudHttpApi
+            Path: "/{{service_instance.inputs.resource_name}}/{id}"
+            Method: PATCH
+{% endif %}
+Outputs:
+  HttpApiEndpoint:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${CrudHttpApi}.execute-api.${AWS::Region}.amazonaws.com/{{service_instance.inputs.resource_name}}"
+  LambdaRuntime:
+    Description: "The lambda runtime"
+    Value: "{{service_instance.inputs.lambda_runtime}}"
