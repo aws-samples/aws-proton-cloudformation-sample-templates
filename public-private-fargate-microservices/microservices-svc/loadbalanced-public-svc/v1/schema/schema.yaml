@@ -1,0 +1,64 @@
+schema:
+  format:
+    openapi: "3.0.0"
+  service_input_type: "LoadBalancedServiceInput"
+  pipeline_input_type: "PipelineInputs"
+
+  types:
+    LoadBalancedServiceInput:
+      type: object
+      description: "Input properties for a loadbalanced Fargate service"
+      properties:
+        port:
+          title: "Port"
+          type: number
+          description: "The port to route traffic to"
+          default: 80
+          minimum: 0
+          maximum: 65535
+        desired_count:
+          title: "Desired count"
+          type: number
+          description: "The default number of Fargate tasks you want running"
+          default: 1
+          minimum: 1
+        task_size:
+          title: "Task size"
+          type: string
+          description: "The size of the task you want to run"
+          enum: ["x-small", "small", "medium", "large", "x-large"]
+          default: "x-small"
+        image:
+          title: "Image"
+          type: string
+          description: "The name/url of the container image"
+          default: "public.ecr.aws/nginx/nginx:1.21"
+          minLength: 1
+          maxLength: 200
+        service_discovery_name:
+          title: "Service discovery namespace"
+          type: string
+          description: "The name of the service to register in service discovery"
+          minLength: 3
+          maxLength: 24
+      required:
+        - service_discovery_name
+
+    PipelineInputs:
+      type: object
+      description: "Pipeline input properties"
+      properties:
+        dockerfile:
+          title: "Dockerfile"
+          type: string
+          description: "The location of the Dockerfile to build"
+          default: "Dockerfile"
+          minLength: 1
+          maxLength: 100
+        unit_test_command:
+          title: "Unit test command"
+          type: string
+          description: "The command to run to unit test the application code"
+          default: "echo 'add your unit test command here'"
+          minLength: 1
+          maxLength: 200

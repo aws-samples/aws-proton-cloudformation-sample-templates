@@ -1,0 +1,12 @@
+proton: ServiceSpec
+
+pipeline:
+  unit_test_command: "ls"
+
+instances:
+  - name: "frontend-dev"
+    environment: "Beta"
+    spec:
+      desired_count: 2
+      port: 80
+      task_size: "medium"

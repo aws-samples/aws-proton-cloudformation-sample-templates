@@ -1,0 +1,115 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Simple Lambda based HTTP service template
+
+Globals:
+  Function:
+    Timeout: {{service_instance.inputs.lambda_timeout}}
+    Tracing: Active
+    MemorySize: {{service_instance.inputs.lambda_memory}}
+
+Resources:
+  CallbackHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      FailOnWarnings: false
+{% if service_instance.inputs.code_uri is defined %}
+  CallbackFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: "{{service_instance.inputs.code_uri}}"
+      Handler: "{{service_instance.inputs.callback_handler}}"
+      Runtime: "{{service_instance.inputs.lambda_runtime}}"
+      Environment:
+        Variables:
+          STREAM_NAME: !Ref UpdateStream
+      Policies:
+        - KinesisCrudPolicy:
+            StreamName: !Ref UpdateStream
+      Events:
+        CallbackApiEvent:
+          Type: Api
+          Properties:
+            Path: /task-update
+            Method: post
+  DataUpdateStreamReader:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: "{{service_instance.inputs.code_uri}}"
+      Handler: "{{service_instance.inputs.stream_handler}}"
+      Runtime: "{{service_instance.inputs.lambda_runtime}}"
+      Environment:
+        Variables:
+          TABLE_NAME: "{{environment.outputs.TableName}}"
+          DISCREPANCY_QUEUE: !Ref UpdateDiscrepanciesQueue
+          FIREHOSE_STREAM: !Ref EventFirehose
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: "{{environment.outputs.TableName}}"
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt UpdateDiscrepanciesQueue.QueueName
+        - FirehoseWritePolicy:
+            DeliveryStreamName: !Ref EventFirehose
+      Events:
+        UpdateEvent:
+          Type: Kinesis
+          Properties:
+            BatchSize: 16
+            Enabled: true
+            StartingPosition: TRIM_HORIZON
+            Stream: !GetAtt UpdateStream.Arn
+  UpdateStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      ShardCount: 1
+  UpdateDiscrepanciesQueue:
+    Type: AWS::SQS::Queue
+  EventFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamType: DirectPut
+      ExtendedS3DestinationConfiguration:
+        BucketARN: {{ environment.outputs.AppBucketArn }}
+        BufferingHints:
+          IntervalInSeconds: 60
+          SizeInMBs: 10
+        CompressionFormat: GZIP
+        Prefix: update/
+        RoleARN: !GetAtt FirehoseRole.Arn
+  FirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - firehose.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: KinesisRolePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:AbortMultipartUpload
+                  - s3:GetBucketLocation
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:ListBucketMultipartUploads
+                  - s3:PutObject
+                Resource:
+                  - {{ environment.outputs.AppBucketArn }}
+                  - "{{ environment.outputs.AppBucketArn }}/*"
+{% endif %}
+Outputs:
+  HttpApiEndpoint:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${CallbackHttpApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/task-update"
+  LambdaRuntime:
+    Description: "The lambda runtime"
+    Value: "{{service_instance.inputs.lambda_runtime}}"

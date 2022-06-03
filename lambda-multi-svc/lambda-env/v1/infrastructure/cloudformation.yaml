@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: This environment holds a simple DDB table shared between services.
+Resources:
+  AppTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: hk
+          AttributeType: S
+        - AttributeName: rk
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: hk
+          KeyType: HASH
+        - AttributeName: rk
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: reverse
+          KeySchema:
+            - AttributeName: rk
+              KeyType: HASH
+            - AttributeName: hk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: "{{ environment.inputs.ttl_attribute }}"
+        Enabled: true
+  AppBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'AES256'
+# These output values will be available to service templates to use.
+Outputs:
+  TableName:
+    Description: The DDB table to be used for all CRUD services
+    Value: !Ref 'AppTable'
+  AppBucketArn:
+    Description: The Bucket used for data processing
+    Value: !GetAtt AppBucket.Arn
