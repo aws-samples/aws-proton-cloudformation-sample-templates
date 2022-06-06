@@ -1,0 +1,8 @@
+proton: ServiceSpec
+pipeline:
+  service_dir: ecs-backend
+  dockerfile: Dockerfile
+  unit_test_command: echo 'add your unit test command here'
+instances:
+  - name: backend-fargate-svc-prod
+    environment: fargate-env-prod

@@ -1,0 +1,12 @@
+proton: EnvironmentSpec
+spec:
+  vpc_cidr: 10.0.0.0/16
+  public_subnet_one_cidr: 10.0.0.0/18
+  public_subnet_two_cidr: 10.0.64.0/18
+  private_subnet_one_cidr: 10.0.128.0/18
+  private_subnet_two_cidr: 10.0.192.0/18
+  subnet_type: public
+  DesiredCapacity: 1
+  MaxSize: 6
+  ECSAMI: /aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id
+  InstanceType: c4.xlarge
