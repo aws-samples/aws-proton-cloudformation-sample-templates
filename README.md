@@ -5,6 +5,8 @@ To use this repository, browse to the folder that corresponds to the template th
 - An architecture description of the template
 - A list of all the parameters required for the template
 - The full content of a template, ready to be registered into AWS Proton
+- A `spec` directory with an example spec file `spec.yaml` that you can use to create an
+environment or a service from the example template.
 - A link to a repository with basic code that runs on each of the templates, in case you want to fork it to use it as the basis for your deployment. The basic code is hosted in the [AWS Proton sample services](https://github.com/aws-samples/aws-proton-sample-services) repository
 
 If you are looking for sample templates to use Terraform go to our [AWS Proton Terraform sample templates](https://github.com/aws-samples/aws-proton-terraform-sample-templates) library
