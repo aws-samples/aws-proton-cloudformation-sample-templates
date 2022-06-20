@@ -83,7 +83,7 @@ aws proton create-environment-template \
 Now create a version which contains the contents of the sample environment template. Compress the sample template files and register the version:
 
 ```bash
-tar -zcvf env-template.tar.gz environment/
+tar -zcvf env-template.tar.gz lambda-env/
 
 aws s3 cp env-template.tar.gz s3://proton-cli-templates-${account_id}/env-template.tar.gz --region us-west-2
 
