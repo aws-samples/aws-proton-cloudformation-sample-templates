@@ -16,7 +16,7 @@ schema:
           default: 80
           minimum: 0
           maximum: 65535
-        health_check:
+        health_check_path:
           title: Health Check Path
           description: The health check path
           type: string
