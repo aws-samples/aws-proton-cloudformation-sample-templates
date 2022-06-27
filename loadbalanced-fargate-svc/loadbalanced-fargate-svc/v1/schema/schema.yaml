@@ -16,6 +16,11 @@ schema:
           default: 80
           minimum: 0
           maximum: 65535
+        health_check:
+          title: Health Check Path
+          description: The health check path
+          type: string
+          default: /
         desired_count:
           title: "Desired count"
           type: number
