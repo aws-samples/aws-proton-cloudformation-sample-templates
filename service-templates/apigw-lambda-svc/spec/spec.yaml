@@ -1,0 +1,8 @@
+proton: ServiceSpec
+pipeline:
+  code_dir: lambda-ping-sns
+  unit_test_command: echo 'add your unit test command here'
+  packaging_command: zip function.zip app.js
+instances:
+  - name: apigw-lambda-svc-prod
+    environment: vpc-env-prod

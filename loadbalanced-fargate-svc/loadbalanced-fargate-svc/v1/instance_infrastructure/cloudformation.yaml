@@ -88,7 +88,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 6
-      HealthCheckPath: /
+      HealthCheckPath: '{{ service_instance.inputs.health_check_path }}'
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
@@ -102,6 +102,9 @@ Resources:
       Protocol: HTTP
       UnhealthyThresholdCount: 2
       VpcId: '{{environment.outputs.VpcId}}'
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '30'
 
   # Create a rule on the load balancer for routing traffic to the target group
   LoadBalancerRule:

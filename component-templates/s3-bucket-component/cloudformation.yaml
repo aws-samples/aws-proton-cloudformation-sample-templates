@@ -1,0 +1,22 @@
+# An S3 Component, which defines both the resource and a policy for accessing the bucket.
+Resources:
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+  S3BucketAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - 's3:Get*'
+              - 's3:List*'
+              - 's3:PutObject'
+            Resource: !GetAtt S3Bucket.Arn
+Outputs:
+  BucketName:
+    Description: "Bucket to access"
+    Value: !GetAtt S3Bucket.Arn
+  BucketAccessPolicyArn:
+    Value: !Ref S3BucketAccessPolicy

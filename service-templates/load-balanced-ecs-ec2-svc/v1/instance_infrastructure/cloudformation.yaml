@@ -1,0 +1,247 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy an ECS service on EC2, hosted in a public or private subnet, 
+             and accessible via a public load balancer.
+Mappings:
+  TaskSize:
+    x-small:
+      cpu: 256
+      memory: 512
+    small:
+      cpu: 512
+      memory: 1024
+    medium:
+      cpu: 1024
+      memory: 2048
+    large:
+      cpu: 2048
+      memory: 4096
+    x-large:
+      cpu: 4096
+      memory: 8192
+
+Resources:
+  LoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      LoadBalancerAttributes:
+        - Key: deletion_protection.enabled
+          Value: 'false'
+      Scheme: internet-facing
+      {% if service_instance.inputs.loadbalancer_type == 'application' %}
+      SecurityGroups:
+        - !GetAtt 
+          - LoadBalancerSecurityGroup
+          - GroupId
+      {% endif %}
+      Subnets:
+        - '{{environment.outputs.PublicSubnet1}}'
+        - '{{environment.outputs.PublicSubnet2}}'
+      {% if service_instance.inputs.loadbalancer_type == 'application' %}
+      Type: application
+  LoadBalancerSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Automatically created Security Group for Application LB.
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow from anyone on port 80
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+      VpcId: '{{environment.outputs.VPC}}'
+  LoadBalancerSecurityGrouptoECSHostSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Properties:
+      GroupId: !GetAtt 
+        - LoadBalancerSecurityGroup
+        - GroupId
+      IpProtocol: tcp
+      Description: Load balancer to target
+      DestinationSecurityGroupId: {{environment.outputs.ECSHostSecurityGroup}}
+      FromPort: 32768
+      ToPort: 65535
+      {% else %}
+      Type: network
+      {% endif %}           
+  LoadBalancerPublicListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref LoadBalancerPublicListenerECSGroup
+          Type: forward
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      {% if service_instance.inputs.loadbalancer_type == 'application' %}
+      Protocol: HTTP
+      {% else %}
+      Protocol: TCP
+      {% endif %}              
+  LoadBalancerPublicListenerECSGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      Port: '{{service_instance.inputs.port}}'
+      {% if service_instance.inputs.loadbalancer_type == 'application' %}
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: 'false'
+      {% else %}
+      Protocol: TCP
+      {% endif %}              
+      TargetType: instance
+      VpcId: '{{environment.outputs.VPC}}'
+  ServiceTaskDefTaskRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: 2012-10-17
+      Policies:
+        - PolicyName: 'Publish2SNS'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'sns:Publish'
+                Resource: '{{environment.outputs.SNSTopicArn}}'
+  ServiceTaskDef:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Cpu: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, cpu]
+          Essential: true
+          Image: '{{service_instance.inputs.image}}'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref ServiceTaskDefLogGroup
+              awslogs-stream-prefix: '{{service.name}}/{{service_instance.name}}'
+              awslogs-region: !Ref 'AWS::Region'
+          Memory: !FindInMap [TaskSize, {{service_instance.inputs.task_size}}, memory]
+          Name: '{{service_instance.name}}'
+          PortMappings:
+            - ContainerPort: '{{service_instance.inputs.port}}'
+              HostPort: 0
+              Protocol: tcp
+          Environment:
+            - Name: SNS_TOPIC_ARN
+              Value: '{"ping":"{{environment.outputs.SNSTopicArn}}"}'
+            - Name: SNS_REGION
+              Value: "{{environment.outputs.SNSRegion}}"
+            - Name: BACKEND_RECORD
+              Value: "{{service_instance.inputs.backend_record}}"
+      ExecutionRoleArn: '{{environment.outputs.ServiceTaskDefExecutionRoleArn}}'
+      Family: '{{service.name}}_{{service_instance.name}}'
+      NetworkMode: bridge
+      RequiresCompatibilities:
+        - EC2
+      TaskRoleArn: !GetAtt 
+        - ServiceTaskDefTaskRole
+        - Arn
+  ServiceTaskDefLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+  Service:
+    Type: 'AWS::ECS::Service'
+    Properties:
+      ServiceName: '{{service.name}}_{{service_instance.name}}'
+      Cluster: '{{environment.outputs.Cluster}}'
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 50
+      DesiredCount: '{{service_instance.inputs.desired_count}}'
+      EnableECSManagedTags: false
+      HealthCheckGracePeriodSeconds: 60
+      LaunchType: EC2
+      LoadBalancers:
+        - ContainerName: '{{service_instance.name}}'
+          ContainerPort: '{{service_instance.inputs.port}}'
+          TargetGroupArn: !Ref LoadBalancerPublicListenerECSGroup
+      SchedulingStrategy: REPLICA
+      ServiceRegistries:
+        - RegistryArn: !GetAtt 
+            - CloudmapService
+            - Arn
+          ContainerName: '{{service_instance.name}}'
+          ContainerPort: '{{service_instance.inputs.port}}'
+      TaskDefinition: !Ref ServiceTaskDef
+    DependsOn:
+      - LoadBalancerPublicListenerECSGroup
+      - LoadBalancerPublicListener
+  CloudmapService:
+    Type: 'AWS::ServiceDiscovery::Service'
+    Properties:
+      DnsConfig:
+        DnsRecords:
+          - TTL: 60
+            Type: SRV
+        NamespaceId: '{{environment.outputs.CloudMapNamespaceId}}'
+        RoutingPolicy: MULTIVALUE
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+      Name: '{{service_instance.name}}.{{service.name}}'
+      NamespaceId: '{{environment.outputs.CloudMapNamespaceId}}'
+  ECSHostSecurityGroupfromLoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: Load balancer to target
+      GroupId: {{environment.outputs.ECSHostSecurityGroup}}
+      FromPort: 32768
+      ToPort: 65535
+      {% if service_instance.inputs.loadbalancer_type == 'application' %}
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - LoadBalancerSecurityGroup
+          - GroupId
+      {% else %}
+      CidrIp: 0.0.0.0/0 #Network Load Balancers do not have associated security groups. See - https://docs.aws.amazon.com/elasticloadbalancing/latest/network/target-group-register-targets.html#target-security-groups
+      {% endif %}
+  TaskCountTarget:
+    Type: 'AWS::ApplicationAutoScaling::ScalableTarget'
+    DependsOn: Service
+    Properties:
+      MaxCapacity: 10
+      MinCapacity: 1
+      ResourceId: !Join 
+        - ''
+        - - service/
+          - '{{environment.outputs.Cluster}}'
+          - /
+          - '{{service.name}}_{{service_instance.name}}'
+      RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
+      ScalableDimension: 'ecs:service:DesiredCount'
+      ServiceNamespace: ecs
+  TaskCountTargetCpuScaling:
+    Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
+    Properties:
+      PolicyName: LBECSEC2ServiceTaskCountTargetCpuScaling
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref TaskCountTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        TargetValue: 50
+  TaskCountTargetMemoryScaling:
+    Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
+    Properties:
+      PolicyName: LBECSEC2ServiceTaskCountTargetMemoryScaling
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref TaskCountTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageMemoryUtilization
+        TargetValue: 50
+Outputs:
+  ServiceURL:
+    Value: !Join 
+      - ''
+      - - 'http://'
+        - !GetAtt 
+          - LoadBalancer
+          - DNSName

@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Simple Lambda based HTTP service template
+
+Globals:
+  Function:
+    Runtime: {{service_instance.inputs.lambda_runtime}}
+    MemorySize: {{service_instance.inputs.lambda_memory}}
+    Timeout: {{service_instance.inputs.lambda_timeout}}
+    Tracing: Active
+
+
+Resources:
+  HttpApi:
+    Type: 'AWS::ApiGatewayV2::Api'
+    Properties:
+      Name: '{{service_instance.name}}'
+      Description: An Amazon API Gateway HTTP API and an AWS Lambda function.
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - GET
+          - HEAD
+          - OPTIONS
+          - POST
+      Target: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${LambdaFunction}/invocations
+  # Lambda Function - uses Globals to define additional configuration values
+  # Define the publisher Lambda function with permissions
+  LambdaFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      {% if service_instance.inputs.code_uri is defined %}
+      Handler: {{service_instance.inputs.lambda_handler}}
+      CodeUri: {{service_instance.inputs.code_uri}}
+      {% else %}
+      Handler: index.handler
+      InlineCode: |
+        exports.handler = async (event, context) => {
+          try {
+            // Log event and context object to CloudWatch Logs
+            console.log("Event: ", JSON.stringify(event, null, 2));
+            console.log("Context: ", JSON.stringify(context, null, 2));
+            // Create event object to return to caller
+            const eventObj = {
+              functionName: context.functionName,
+              method: event.requestContext.http.method,
+              rawPath: event.rawPath,
+            };
+            const response = {
+              statusCode: 200,
+              body: JSON.stringify(eventObj, null, 2),
+            };
+            return response;
+          } catch (error) {
+            console.error(error);
+            throw new Error(error);
+          }
+        };
+      {% endif %}
+      FunctionName: '{{service_instance.name}}-function'
+      Environment:
+        Variables:
+          SNSTopicArn: '{{environment.outputs.SNSTopicArn}}'
+      Policies:
+        - AWSLambdaVPCAccessExecutionRole
+        - SNSPublishMessagePolicy:
+            TopicName: '{{environment.outputs.SNSTopicName}}'
+      VpcConfig:
+        SecurityGroupIds:
+          - '{{environment.outputs.VPCSecurityGroup}}'
+        SubnetIds:
+        {% if service_instance.inputs.subnet_type == 'private' %}
+            - '{{environment.outputs.PrivateSubnet1}}'
+            - '{{environment.outputs.PrivateSubnet2}}'
+        {% else %}
+            - '{{environment.outputs.PublicSubnet1}}'
+            - '{{environment.outputs.PublicSubnet2}}'
+        {% endif %}
+  # Function permissions grant an AWS service or another account permission to use a function
+  FunctionResourcePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      Principal: apigateway.amazonaws.com
+      FunctionName: !Ref LambdaFunction
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*'
+Outputs:
+  HttpApiEndpoint:
+    Description: The default endpoint for the HTTP API.
+    Value: !GetAtt HttpApi.ApiEndpoint
+  LambdaRuntime:
+    Description: The lambda runtime
+    Value: "{{service_instance.inputs.lambda_runtime}}"

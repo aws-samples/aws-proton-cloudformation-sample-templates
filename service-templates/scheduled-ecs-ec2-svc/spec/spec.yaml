@@ -1,0 +1,8 @@
+proton: ServiceSpec
+pipeline:
+  service_dir: ecs-ping-sns
+  dockerfile: Dockerfile
+  unit_test_command: echo 'add your unit test command here'
+instances:
+  - name: scheduled-ecs-ec2-svc-prod
+    environment: ecs-ec2-env-prod

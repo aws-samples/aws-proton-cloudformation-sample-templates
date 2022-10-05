@@ -1,0 +1,76 @@
+schema:
+  format:
+    openapi: "3.0.0"
+  service_input_type: "WorkerLambdaServiceInput"
+  pipeline_input_type: "PipelineInputs"
+
+  types:
+    WorkerLambdaServiceInput:
+      type: object
+      description: "Input properties for a SQS-Lambda based Worker service."
+      properties:
+        lambda_handler:
+          title: "Lambda handler"
+          type: string
+          description: "The function within your code that is called to begin execution"
+          minLength: 1
+          maxLength: 50
+          default: "app.handler"
+        lambda_memory:
+          title: "Lambda memory"
+          type: number
+          description: "The size of your Lambda functions in MB"
+          default: 512
+          minimum: 1
+          maximum: 3008
+        lambda_timeout:
+          title: "Lambda timeout"
+          type: number
+          description: "The timeout in seconds of your Lambda function"
+          default: 30
+          minimum: 1
+          maximum: 900
+        lambda_runtime:
+          title: "Lambda runtime"
+          type: string
+          description: "The runtime for your Lambda service"
+          enum: ["nodejs12.x", "python3.8", "ruby2.7", "java11", "go1.x", "dotnetcore3.1"]
+          default: "nodejs12.x"
+        code_uri:
+          title: "Code URI"
+          type: string
+          description: "The s3 link to your application"
+          minLength: 1
+          maxLength: 200
+        subnet_type:
+          title: "Subnet type"
+          type: string
+          description: "Subnet type for your function"
+          enum: ["public", "private"]
+          default: "public"
+
+    PipelineInputs:
+      type: object
+      description: "Pipeline input properties"
+      properties:
+        code_dir:
+          title: "Application Code Directory"
+          type: string
+          description: "Source directory for the service"
+          default: "lambda-worker"
+          minLength: 1
+          maxLength: 100
+        unit_test_command:
+          title: "Unit test command"
+          type: string
+          description: "The command to run to unit test the application code"
+          default: "echo 'add your unit test command here'"
+          minLength: 1
+          maxLength: 200
+        packaging_command:
+          title: "Packaging command"
+          type: string
+          description: "The commands which packages your code into a file called function.zip"
+          default: "zip function.zip app.js"
+          minLength: 1
+          maxLength: 200

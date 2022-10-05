@@ -1,0 +1,238 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: A stack for deploying containerized applications in AWS Fargate.
+             This stack runs containers in a public or private VPC subnet. 
+
+Mappings:
+  # The VPC and subnet configuration is passed in via the environment spec.
+  SubnetConfig:
+    VPC:
+      CIDR: '{{ environment.inputs.vpc_cidr}}'
+    Public1:
+      CIDR: '{{ environment.inputs.public_subnet_one_cidr}}'
+    Public2:
+      CIDR: '{{ environment.inputs.public_subnet_two_cidr}}'
+    Private1:
+      CIDR: '{{ environment.inputs.private_subnet_one_cidr}}'
+    Private2:
+      CIDR: '{{ environment.inputs.private_subnet_two_cidr}}'   
+
+Resources:
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: !FindInMap ['SubnetConfig', 'VPC', 'CIDR']
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+  PublicSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !FindInMap ['SubnetConfig', 'Public1', 'CIDR']
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        Fn::Select:
+         - 0
+         - Fn::GetAZs: {Ref: 'AWS::Region'}
+      MapPublicIpOnLaunch: true
+  PublicSubnet1RouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+  PublicSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicSubnet1RouteTable
+      SubnetId: !Ref PublicSubnet1
+  PublicSubnet1DefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PublicSubnet1RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+    DependsOn:
+      - GatewayAttachement
+  PublicSubnet1EIP:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  PublicSubnet1NATGateway:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      AllocationId: !GetAtt 
+        - PublicSubnet1EIP
+        - AllocationId
+  PublicSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !FindInMap ['SubnetConfig', 'Public2', 'CIDR']
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        Fn::Select:
+         - 1
+         - Fn::GetAZs: {Ref: 'AWS::Region'}
+      MapPublicIpOnLaunch: true
+  PublicSubnet2RouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+  PublicSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicSubnet2RouteTable
+      SubnetId: !Ref PublicSubnet2
+  PublicSubnet2DefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PublicSubnet2RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+    DependsOn:
+      - GatewayAttachement
+  PublicSubnet2EIP:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  PublicSubnet2NATGateway:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      AllocationId: !GetAtt 
+        - PublicSubnet2EIP
+        - AllocationId
+  PrivateSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !FindInMap ['SubnetConfig', 'Private1', 'CIDR']
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        Fn::Select:
+         - 0
+         - Fn::GetAZs: {Ref: 'AWS::Region'}
+      MapPublicIpOnLaunch: false
+  PrivateSubnet1RouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+  PrivateSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PrivateSubnet1RouteTable
+      SubnetId: !Ref PrivateSubnet1
+  PrivateSubnet1DefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PrivateSubnet1RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref PublicSubnet1NATGateway
+  PrivateSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !FindInMap ['SubnetConfig', 'Private2', 'CIDR']
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        Fn::Select:
+         - 1
+         - Fn::GetAZs: {Ref: 'AWS::Region'}
+      MapPublicIpOnLaunch: false
+  PrivateSubnet2RouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+  PrivateSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PrivateSubnet2RouteTable
+      SubnetId: !Ref PrivateSubnet2
+  PrivateSubnet2DefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PrivateSubnet2RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref PublicSubnet2NATGateway
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+  GatewayAttachement:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  CloudMapNamespace:
+    Type: 'AWS::ServiceDiscovery::PrivateDnsNamespace'
+    Properties:
+      Name: '{{environment.name}}.local'
+      Vpc: !Ref VPC
+  Cluster:
+    Type: 'AWS::ECS::Cluster'
+  ServiceTaskDefExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+  pingSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-ping'
+      KmsMasterKeyId: 'alias/aws/sns'
+  pingSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    DependsOn: pingSNSTopic
+    Properties:
+      Topics:
+        - !Ref pingSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Action:
+              - sns:Subscribe
+            Resource: !Ref pingSNSTopic
+            Condition:
+              StringEquals:
+                "sns:Protocol": "sqs"
+Outputs:
+  Cluster:
+    Description: The name of the ECS cluster
+    Value: !Ref 'Cluster'
+  ClusterArn:
+    Description: The ARN of the ECS cluster
+    Value: !GetAtt 'Cluster.Arn'
+  ServiceTaskDefExecutionRoleArn:
+    Description: The ARN of the ECS role
+    Value: !GetAtt 'ServiceTaskDefExecutionRole.Arn'
+  SNSTopicArn:
+    Description: The name of the SNS Topic
+    Value: !Ref 'pingSNSTopic'
+  SNSTopicName:
+    Description: TopicName of the SNS Topic
+    Value: !GetAtt pingSNSTopic.TopicName
+  SNSRegion:
+    Description: Region of the SNS Topic
+    Value: !Ref 'AWS::Region'
+  VPC:
+    Description: The ID of the VPC that this stack is deployed in
+    Value: !Ref 'VPC'
+  PublicSubnet1:
+    Description: Public subnet one
+    Value: !Ref 'PublicSubnet1'
+  PublicSubnet2:
+    Description: Public subnet two
+    Value: !Ref 'PublicSubnet2'
+  PrivateSubnet1:
+    Description: Private subnet one
+    Value: !Ref 'PrivateSubnet1'
+  PrivateSubnet2:
+    Description: Private subnet two
+    Value: !Ref 'PrivateSubnet2'
+  CloudMapNamespaceId:
+    Description: CloudMap namespace Id
+    Value: !GetAtt 'CloudMapNamespace.Id'
