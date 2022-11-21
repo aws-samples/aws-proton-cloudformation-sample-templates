@@ -1,5 +1,5 @@
 ### NOTE
-AppRunner is not available these regions: FRA (eu-central-1), ICN (ap-northeast-2), LHR (eu-west-2), SIN (ap-southeast-1), SYD (ap-southeast-2), YUL (ca-central-1). This template will only work in these regions: IAD (us-east-1), PDX (us-west-2), DUB (eu-west-1), CMH (us-east-2), NRT (ap-northeast-1). 
+AppRunner is not available these regions: Frankfurt (eu-central-1), Seoul (ap-northeast-2), London (eu-west-2), Singapore (ap-southeast-1), Sydney (ap-southeast-2), Canada Central (ca-central-1). This template will only work in these regions: N. Virginia (us-east-1), N. California (us-west-2), Ireland (eu-west-1), Ohio (us-east-2), Tokyo (ap-northeast-1). 
 
 ## Description
 
