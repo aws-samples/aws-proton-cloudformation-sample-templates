@@ -1,5 +1,5 @@
 ### NOTE
-AppRunner is not available these regions: Frankfurt (eu-central-1), Seoul (ap-northeast-2), London (eu-west-2), Singapore (ap-southeast-1), Sydney (ap-southeast-2), Canada Central (ca-central-1). This template will only work in these regions: N. Virginia (us-east-1), N. California (us-west-2), Ireland (eu-west-1), Ohio (us-east-2), Tokyo (ap-northeast-1). 
+AppRunner may only be available in certain regions. Check [here](https://docs.aws.amazon.com/general/latest/gr/apprunner.html) for where AppRunner may be available. 
 
 ## Description
 
