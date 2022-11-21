@@ -1,3 +1,6 @@
+### NOTE
+AppRunner is not available these regions: Frankfurt (eu-central-1), Seoul (ap-northeast-2), London (eu-west-2), Singapore (ap-southeast-1), Sydney (ap-southeast-2), Canada Central (ca-central-1). This template will only work in these regions: N. Virginia (us-east-1), N. California (us-west-2), Ireland (eu-west-1), Ohio (us-east-2), Tokyo (ap-northeast-1). 
+
 ## Description
 
 This template creates a VPC with two public and private subnets across two availability zones. The VPC includes an Internet Gateway and a managed NAT Gateway in each public subnet as well as VPC Route Tables that allow for communication between the public and private subnets. 
