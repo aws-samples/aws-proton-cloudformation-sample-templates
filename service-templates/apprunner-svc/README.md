@@ -1,3 +1,6 @@
+### NOTE
+AppRunner is not available these regions: FRA (eu-central-1), ICN (ap-northeast-2), LHR (eu-west-2), SIN (ap-southeast-1), SYD (ap-southeast-2), YUL (ca-central-1). This template will only work in these regions: IAD (us-east-1), PDX (us-west-2), DUB (eu-west-1), CMH (us-east-2), NRT (ap-northeast-1). 
+
 ## Description
 
 This template is compatible with the [vpc-env](../../environment-templates/vpc-env) template. It creates an AWS App Runner service that autoscales your instances based on incoming traffic and scales down to a baseline instance when there's no traffic. This option is more cost effective for HTTP services with sudden bursts in request volumes or low request volumes. The App Runner service is connected to the VPC through VPC connectors, and all outbound traffic from the service will be routed based on the VPC routing rules. The service doesn't have access to the public internet unless allowed by a route to the NAT gateway in the public subnet. Please see [App Runner VPC Support](https://aws.amazon.com/blogs/aws/new-for-app-runner-vpc-support/) for more info. 
