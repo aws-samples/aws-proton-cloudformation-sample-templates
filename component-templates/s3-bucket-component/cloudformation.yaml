@@ -2,6 +2,13 @@
 Resources:
   S3Bucket:
     Type: 'AWS::S3::Bucket'
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'AES256'
   S3BucketAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
