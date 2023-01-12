@@ -1,3 +1,5 @@
 proton: EnvironmentSpec
 spec:
-  vpc_cidr: "10.0.0.0/16"
+  vpc_cidr: "10.200.0.0/16"
+  subnet_one_cidr: "10.200.0.0/24"
+  subnet_two_cidr: "10.200.1.0/24"

@@ -59,3 +59,10 @@ schema:
           default: "echo 'add your unit test command here'"
           minLength: 1
           maxLength: 200
+        dockerpath:
+          title: "Docker Path"
+          type: string
+          description: "Path the Dockerfile is located"
+          default: "."
+          minLength: 1
+          maxLength: 500

@@ -1,12 +1,16 @@
 proton: ServiceSpec
 
 pipeline:
+  dockerfile: "ecs-static-website/Dockerfile"
   unit_test_command: "ls"
+  dockerpath: "ecs-static-website/"
 
 instances:
   - name: "frontend-dev"
     environment: "Beta"
     spec:
-      desired_count: 2
       port: 80
-      task_size: "medium"
+      health_check_path: "/"
+      desired_count: 1
+      task_size: "x-small"
+      image: "public.ecr.aws/nginx/nginx:1.23"

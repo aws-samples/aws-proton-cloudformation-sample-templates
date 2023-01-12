@@ -3,11 +3,12 @@
 This directory contains sample AWS Proton Environment and Service templates for an Amazon ECS load-balanced service running on AWS Fargate, as well as sample specs for creating Proton Environments and Services using the templates. The environment template contains an ECS Cluster and a VPC with two public subnets. The service template contains all the resources required to create an ECS Fargate service behind a load balancer in that environment, as well as sample specs for creating Proton Environments and Services using the templates.
 
 Developers provisioning their services can configure the following properties through their service spec:
-* Fargate CPU size
-* Fargate memory size
-* Number of running containers
 
-If you need application code to run in the service, you can find a sample application here: https://github.com/aws-samples/aws-proton-sample-fargate-service
+- Fargate CPU size
+- Fargate memory size
+- Number of running containers
+
+If you need application code to run in the service, you can find a sample application here: https://github.com/aws-samples/aws-proton-sample-services
 
 # Registering and deploying these templates
 
@@ -53,7 +54,7 @@ aws proton update-account-settings \
   --pipeline-service-role-arn "arn:aws:iam::${account_id}:role/ProtonServiceRole"
 ```
 
-Create an AWS CodeStar Connections connection to your application code stored in a GitHub or Bitbucket source code repository.  This connection allows CodePipeline to pull your application source code before building and deploying the code to your Proton service.  To use sample application code, first create a fork of the sample application repository here:
+Create an AWS CodeStar Connections connection to your application code stored in a GitHub or Bitbucket source code repository. This connection allows CodePipeline to pull your application source code before building and deploying the code to your Proton service. To use sample application code, first create a fork of the sample application repository here:
 https://github.com/aws-samples/aws-proton-sample-fargate-service
 
 Creating the source code connection must be completed in the CodeStar Connections console:
@@ -75,7 +76,7 @@ aws proton create-environment-template \
 Now create a version which contains the contents of the sample environment template. Compress the sample template files and register the version:
 
 ```
-tar -zcvf env-template.tar.gz environment/
+tar -zcvf env-template.tar.gz loadbalanced-fargate-env/
 
 aws s3 cp env-template.tar.gz s3://proton-cli-templates-${account_id}/env-template.tar.gz
 
@@ -94,7 +95,7 @@ aws proton wait environment-template-version-registered \
   --template-name "public-vpc" \
   --major-version "1" \
   --minor-version "0"
-  
+
 aws proton get-environment-template-version \
   --template-name "public-vpc" \
   --major-version "1" \
@@ -127,7 +128,7 @@ aws proton create-service-template \
 Now create a version which contains the contents of the sample service template. Compress the sample template files and register the version:
 
 ```
-tar -zcvf svc-template.tar.gz service/
+tar -zcvf svc-template.tar.gz loadbalanced-fargate-svc/
 
 aws s3 cp svc-template.tar.gz s3://proton-cli-templates-${account_id}/svc-template.tar.gz --region us-west-2
 
@@ -147,7 +148,7 @@ aws proton wait service-template-version-registered \
   --template-name "lb-fargate-service" \
   --major-version "1" \
   --minor-version "0"
-  
+
 aws proton get-service-template-version \
   --template-name "lb-fargate-service" \
   --major-version "1" \
@@ -170,9 +171,9 @@ With the registered and published environment template, you can now instantiate 
 
 You can use two different environment provisioning methods when you create environments.
 
-* Create, manage and provision an environment in a single account.
+- Create, manage and provision an environment in a single account.
 
-* In a single management account create and manage an environment that is provisioned in another account with environment account connections. For more information, see [Create an environment in one account and provision in another account](https://docs.aws.amazon.com/proton/latest/adminguide/ag-create-env.html#ag-create-env-deploy-other) and [Environment account connections](https://docs.aws.amazon.com/proton/latest/adminguide/ag-env-account-connections.html).
+- In a single management account create and manage an environment that is provisioned in another account with environment account connections. For more information, see [Create an environment in one account and provision in another account](https://docs.aws.amazon.com/proton/latest/adminguide/ag-create-env.html#ag-create-env-deploy-other) and [Environment account connections](https://docs.aws.amazon.com/proton/latest/adminguide/ag-env-account-connections.html).
 
 ### Create and Provision Environment in a single account
 
@@ -191,7 +192,7 @@ Wait for the environment to successfully deploy:
 
 ```
 aws proton wait environment-deployed --name Beta
-  
+
 aws proton get-environment --name Beta
 ```
 
@@ -220,7 +221,7 @@ aws proton create-environment-account-connection \
   --management-account-id ${account_id} \
   --environment-name "Beta" \
   --role-arn arn:aws:iam::${environment_account_id}:role/ProtonServiceRole
-  
+
 environment_account_connection_id=`replace_with_the_environment_account_connection_id_returned_above`
 ```
 
@@ -245,7 +246,7 @@ Wait for the environment to successfully deploy. Use the `get` call to check for
 
 ```bash
 aws proton wait environment-deployed --name Beta
-  
+
 aws proton get-environment --name Beta
 ```
 
@@ -253,7 +254,7 @@ aws proton get-environment --name Beta
 
 With the registered and published service template and deployed environment, you can now create a Proton service and deploy it into your Proton environment.
 
-This command reads your service spec at `specs/svc-spec.yaml`, merges it with the service template created above, and deploys the resources in CloudFormation stacks in the AWS account of the environment.  
+This command reads your service spec at `specs/svc-spec.yaml`, merges it with the service template created above, and deploys the resources in CloudFormation stacks in the AWS account of the environment.
 The service will provision a Lambda-based CRUD API endpoint and a CodePipeline pipeline to deploy your application code.
 
 Fill in your CodeStar Connections connection ID and your source code repository details in this command.

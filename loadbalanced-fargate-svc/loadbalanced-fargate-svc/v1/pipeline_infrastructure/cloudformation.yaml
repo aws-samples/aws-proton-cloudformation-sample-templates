@@ -76,7 +76,7 @@ Resources:
               - Ref: AWS::AccountId
               - >-
                 .dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG",
-                        "docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG -f {{ pipeline.inputs.dockerfile }} .",
+                        "docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG -f {{ pipeline.inputs.dockerfile }} {{ pipeline.inputs.dockerpath }}",
                         "docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $IMAGE_ID;",
                         "docker push $IMAGE_ID"
                       ]
