@@ -1,0 +1,284 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS Fargate cluster running containers in public and private subnets. Supports
+             public facing microservices behind load balancer, private microservices, and private service discovery namespaces. Deployed resources are all tagged with defined environment name tag.
+Mappings:
+  # The VPC and subnet configuration is passed in via the environment spec.
+  EnvironmentNameConfig:
+    Environment:
+      Name: '{{ environment.name}}'
+  SubnetConfig:
+    VPC:
+      CIDR: '{{ environment.inputs.vpc_cidr}}'
+    PublicOne:
+      CIDR: '{{ environment.inputs.public_subnet_one_cidr}}'
+    PublicTwo:
+      CIDR: '{{ environment.inputs.public_subnet_two_cidr}}'
+    PrivateOne:
+      CIDR: '{{ environment.inputs.private_subnet_one_cidr}}'
+    PrivateTwo:
+      CIDR: '{{ environment.inputs.private_subnet_two_cidr}}'
+  ServiceDiscoveryConfig:
+    PrivateNamespace:
+      Name: '{{ environment.inputs.service_discovery_namespace}}'
+
+Resources:
+ # Create the VPC with subnets across 2 Availability Zones, 2 Public subnets, 2 Private subnets,
+ # an Internet Gateway, 2 Nat Gateways and the required routetables and routes
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !FindInMap ['SubnetConfig', 'VPC', 'CIDR']
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnetOne:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        Fn::Select:
+        - 0
+        - Fn::GetAZs: {Ref: 'AWS::Region'}
+      CidrBlock: !FindInMap ['SubnetConfig', 'PublicOne', 'CIDR']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+  PublicSubnetTwo:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        Fn::Select:
+        - 1
+        - Fn::GetAZs: {Ref: 'AWS::Region'}
+      CidrBlock: !FindInMap ['SubnetConfig', 'PublicTwo', 'CIDR']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+  PrivateSubnetOne:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        Fn::Select:
+        - 0
+        - Fn::GetAZs: {Ref: 'AWS::Region'}
+      CidrBlock: !FindInMap ['SubnetConfig', 'PrivateOne', 'CIDR']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+  PrivateSubnetTwo:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone:
+        Fn::Select:
+        - 1
+        - Fn::GetAZs: {Ref: 'AWS::Region'}
+      CidrBlock: !FindInMap ['SubnetConfig', 'PrivateTwo', 'CIDR']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+  NatGatewayOneEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+  NatGatewayTwoEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+  NatGatewayOne:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayOneEIP.AllocationId
+      SubnetId: !Ref PublicSubnetOne
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+  NatGatewayTwo:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayTwoEIP.AllocationId
+      SubnetId: !Ref PublicSubnetTwo
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetOneRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetOne
+
+  PublicSubnetTwoRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetTwo
+
+  PrivateRouteTableOne:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+  DefaultPrivateRouteOne:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableOne
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayOne
+
+  PrivateSubnetOneRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableOne
+      SubnetId: !Ref PrivateSubnetOne
+
+  PrivateRouteTableTwo:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+  DefaultPrivateRouteTwo:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableTwo
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayTwo
+
+  PrivateSubnetTwoRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableTwo
+      SubnetId: !Ref PrivateSubnetTwo
+
+  # Create a Private namespace for Service Discovery
+  PrivateNamespace:
+    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
+    Properties:
+      Name: !FindInMap ['ServiceDiscoveryConfig', 'PrivateNamespace', 'Name']
+      Vpc: !Ref 'VPC'
+
+  # Create the ECS Cluster to schedule and orchestrate the Fargate containers
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+  # A security group for the containers we will run in Fargate.
+  # Rules are added to this security group based on what ingress you
+  # add for the cluster.
+  ContainerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Access to the Fargate containers
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+  # This is a role which is used by the ECS tasks themselves.
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs-tasks.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+      Tags:
+        - Key: Name
+          Value: !FindInMap ['EnvironmentNameConfig', 'Environment', 'Name']
+
+# These output values will be available to service templates to use.
+Outputs:
+  ClusterName:
+    Description: The name of the ECS cluster
+    Value: !Ref 'ECSCluster'
+  ECSTaskExecutionRole:
+    Description: The ARN of the ECS role
+    Value: !GetAtt 'ECSTaskExecutionRole.Arn'
+  VpcId:
+    Description: The ID of the VPC that this stack is deployed in
+    Value: !Ref 'VPC'
+  PublicSubnetOne:
+    Description: A reference to the public subnet in the 1st Availability Zone
+    Value: !Ref 'PublicSubnetOne'
+  PublicSubnetTwo:
+    Description: A reference to the public subnet in the 2nd Availability Zone
+    Value: !Ref 'PublicSubnetTwo'
+  PrivateSubnetOne:
+    Description: A reference to the private subnet in the 1st Availability Zone
+    Value: !Ref 'PrivateSubnetOne'
+  PrivateSubnetTwo:
+    Description: A reference to the private subnet in the 2nd Availability Zone
+    Value: !Ref 'PrivateSubnetTwo'
+  ContainerSecurityGroup:
+    Description: A security group used to allow Fargate containers to receive traffic
+    Value: !Ref 'ContainerSecurityGroup'
+  PrivateNamespace:
+    Description: The NamespaceId registered for Service Discovery
+    Value: !Ref 'PrivateNamespace'
