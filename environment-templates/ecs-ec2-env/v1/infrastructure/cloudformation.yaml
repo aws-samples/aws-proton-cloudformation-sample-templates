@@ -468,7 +468,7 @@ Resources:
           CLUSTER:
             Ref: Cluster
       Handler: index.lambda_handler
-      Runtime: python3.6
+      Runtime: python3.8
       Timeout: 310
     DependsOn:
       - ECSDrainHookFunctionServiceRoleDefaultPolicy
