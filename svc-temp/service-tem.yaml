@@ -1,0 +1,48 @@
+name: sample-microservice
+description: A sample microservice deployed using AWS Proton
+
+schemaVersion: 1
+
+artifactSets:
+  - name: sample-microservice
+    artifactSetTemplate: codepipeline-manifest
+    environmentPlacement:
+      provisioning: automatic
+
+environments:
+  - name: development
+    templateName: sample-microservice-environment
+    description: Development environment for the sample microservice
+    provisioning: automatic
+
+templates:
+  - name: sample-microservice-environment
+    description: Template for the development environment
+    templateVersion: 1
+    compatibleEnvironmentTemplateMajorVersion: 1
+    schemaMajorVersion: 1
+
+    templateData:
+      resources:
+        - name: sample-microservice-cluster
+          type: AWS::ECS::Cluster
+          properties:
+            clusterName: !Ref 'AWS::StackName'
+
+        - name: sample-microservice-service
+          type: AWS::ECS::Service
+          properties:
+            serviceName: sample-microservice-service
+            cluster: !Ref sample-microservice-cluster
+            taskDefinition: sample-microservice-task-definition
+            desiredCount: 2
+
+        - name: sample-microservice-task-definition
+          type: AWS::ECS::TaskDefinition
+          properties:
+            family: sample-microservice-task
+            containerDefinitions:
+              - name: sample-microservice-container
+                image: nginx:latest
+                portMappings:
+                  - containerPort: 80
